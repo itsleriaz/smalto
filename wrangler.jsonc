@@ -1,0 +1,7 @@
+// Cloudflare: publishes the built manual (manual/book, from `mdbook build manual`)
+// as a static site. "name" must match the project name in the Cloudflare dashboard.
+{
+  "name": "smalto-manual",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./manual/book" }
+}

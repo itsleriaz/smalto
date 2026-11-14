@@ -2,6 +2,8 @@
 
 #include "core/Pen.h"
 
+#include <cmath>
+
 using namespace core;
 
 TEST_CASE("pressure level follows the curve and is clamped")

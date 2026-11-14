@@ -1,0 +1,125 @@
+# GitHub Actions CI for Smalto (replaces .gitlab-ci.yml).
+#
+# tests          Qt-free tests (core/ and formats/) on Linux.
+# check-version  on tags, the tag must equal the version in CMakeLists.txt.
+# package-macos / package-windows
+#                universal .dmg and portable x64 zip, built with the official Qt from
+#                aqtinstall. Run on version tags (v*) or by hand (Actions > Run workflow).
+#                Artifacts are kept for 30 days.
+#
+# Not here yet: the Linux build with Qt, and signing / notarizing (would need
+# repository secrets).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  QT_VERSION: "6.10.3"
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends build-essential cmake ninja-build
+      - name: Configure
+        run: cmake -S . -B build/ci -G Ninja -DCMAKE_BUILD_TYPE=Release -DSMALTO_BUILD_APP=OFF
+      - name: Build
+        run: cmake --build build/ci
+      - name: Test
+        run: build/ci/tests/smalto_tests
+
+  # A release tag must match the version in CMakeLists.txt (v0.2.0 <-> VERSION 0.2.0),
+  # or the .dmg would carry a different number than the release.
+  check-version:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare tag and CMakeLists.txt
+        run: |
+          cmake_version=$(sed -n 's/^project(Smalto VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          tag_version=${GITHUB_REF_NAME#v}
+          echo "tag: $tag_version, CMakeLists.txt: $cmake_version"
+          if [ -z "$cmake_version" ] || [ "$cmake_version" != "$tag_version" ]; then
+            echo "::error::The tag $GITHUB_REF_NAME doesn't match the version in CMakeLists.txt."
+            exit 1
+          fi
+
+  package-macos:
+    needs: [tests, check-version]
+    # check-version is skipped on manual runs, which must still go on.
+    if: >-
+      !cancelled() && needs.tests.result == 'success' &&
+      (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') &&
+      (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install tools
+        run: |
+          command -v ninja >/dev/null || brew install ninja
+          command -v cmake >/dev/null || brew install cmake
+      - name: Cache Qt
+        id: qt-cache
+        uses: actions/cache@v4
+        with:
+          path: .qt
+          key: qt-${{ env.QT_VERSION }}-macos
+      - name: Install Qt
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        run: |
+          python -m pip install --quiet aqtinstall
+          aqt install-qt mac desktop $QT_VERSION clang_64 -O .qt -m qtshadertools
+      - name: Package
+        run: scripts/package-macos.sh "$GITHUB_WORKSPACE/.qt/$QT_VERSION/macos"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smalto-macos-${{ github.ref_name }}
+          path: dist/*.dmg
+          retention-days: 30
+
+  package-windows:
+    needs: [tests, check-version]
+    if: >-
+      !cancelled() && needs.tests.result == 'success' &&
+      (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') &&
+      (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache Qt
+        id: qt-cache
+        uses: actions/cache@v4
+        with:
+          path: .qt
+          key: qt-${{ env.QT_VERSION }}-windows
+      - name: Install Qt
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          python -m pip install --quiet aqtinstall
+          aqt install-qt windows desktop $env:QT_VERSION win64_msvc2022_64 -O .qt -m qtshadertools
+      - name: Package
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts\package-windows.ps1 -Qt "$env:GITHUB_WORKSPACE\.qt\$env:QT_VERSION\msvc2022_64"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smalto-windows-${{ github.ref_name }}
+          path: dist/*.zip
+          retention-days: 30

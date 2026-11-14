@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 128 128" role="img"><title>Smalto icon: rosette, Lagoon</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#900c3f"/>
+      <stop offset="1" stop-color="#900c3f"/>
+    </linearGradient>
+    <linearGradient id="center" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.28" r="0.7">
+      <stop offset="0" stop-color="#99b898" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#99b898" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="128" height="128" fill="url(#bg)"/>
+
+  <!-- wedge tiles: inner ring (8) and outer ring (16), alternating colors -->
+  <g transform="rotate(-90 64 64)" fill="none">
+    <circle cx="64" cy="64" r="25" stroke="#99b898" stroke-width="12" stroke-dasharray="17.1 22.17"/>
+    <circle cx="64" cy="64" r="25" stroke="#feceab" stroke-width="14" stroke-dasharray="17.1 22.17" stroke-dashoffset="-19.63"/>
+    <circle cx="64" cy="64" r="43" stroke="#ff847c" stroke-width="14" stroke-dasharray="14.7 19.07"/>
+    <circle cx="64" cy="64" r="43" stroke="#e84a5f" stroke-width="18" stroke-dasharray="14.7 19.07" stroke-dashoffset="-16.89"/>
+  </g>
+
+  <!-- center and gloss -->
+  <circle cx="64" cy="64" r="12" fill="url(#center)"/>
+  <circle cx="64" cy="64" r="50" fill="url(#gloss)"/>
+</svg>

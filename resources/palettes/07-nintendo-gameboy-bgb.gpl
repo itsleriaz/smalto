@@ -1,0 +1,10 @@
+GIMP Palette
+Name: Game Boy (BGB)
+Columns: 4
+# Game Boy (BGB) by BGB emulator
+# Colors from https://lospec.com/palette-list/nintendo-gameboy-bgb
+#
+  8  24  32	#081820
+ 52 104  86	#346856
+136 192 112	#88c070
+224 248 208	#e0f8d0

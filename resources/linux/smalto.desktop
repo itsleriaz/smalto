@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Smalto
+GenericName=Pixel Art Editor
+Comment=Pixel art editor and animator
+Exec=smalto %F
+Icon=smalto
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+MimeType=application/x-aseprite;

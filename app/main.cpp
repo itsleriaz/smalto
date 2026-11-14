@@ -21,6 +21,10 @@ int main(int argc, char* argv[])
     QGuiApplication::setApplicationName(QStringLiteral("Smalto"));
     QGuiApplication::setOrganizationName(QStringLiteral("Smalto"));
     QGuiApplication::setApplicationVersion(QStringLiteral(SMALTO_VERSION));
+#ifdef Q_OS_LINUX
+    // Names resources/linux/smalto.desktop, which gives the window its icon and name.
+    QGuiApplication::setDesktopFileName(QStringLiteral("smalto"));
+#endif
 
     // Before the engine, so files opened at launch (Finder, command line)
     // wait for QML. Declared first, destroyed last.

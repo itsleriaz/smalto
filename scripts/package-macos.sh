@@ -53,6 +53,13 @@ if [ "$NEWEST" != "$MINOS" ]; then
   MINOS=$NEWEST
 fi
 
+# The manual (Help > Smalto Manual): built here when mdBook is installed, else
+# whatever manual/book already holds (CI builds it once for every package).
+scripts/build-manual.sh
+if [ -f manual/book/index.html ]; then
+  cp -R manual/book "$DIST/Smalto.app/Contents/Resources/manual"
+fi
+
 # macdeployqt re-signs ad hoc; make sure the whole bundle is consistent.
 codesign --force --deep --sign - "$DIST/Smalto.app"
 

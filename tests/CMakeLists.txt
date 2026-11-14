@@ -29,6 +29,7 @@ add_executable(smalto_tests
     test_particles.cpp
     test_livelayer.cpp
     test_smear.cpp
+    test_pen.cpp
 )
 target_include_directories(smalto_tests PRIVATE ${doctest_SOURCE_DIR})
 target_link_libraries(smalto_tests PRIVATE smalto_formats)
@@ -56,6 +57,7 @@ if(SMALTO_BUILD_APP)
         app/test_lospec.cpp
         app/test_shortcuts.cpp
         app/test_brushes.cpp
+        app/test_pen.cpp
         app/test_migration.cpp
         ${PROJECT_SOURCE_DIR}/app/Editor.h
         ${PROJECT_SOURCE_DIR}/app/Editor.cpp

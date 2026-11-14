@@ -10,6 +10,8 @@ MenuItem {
     property string hint
     // A divider line instead of an entry (for menus made from a model).
     property bool rule: false
+    // A destructive entry (delete, clear): red text and a red highlight.
+    property bool danger: false
 
     implicitWidth: Math.max(200, row.implicitWidth + leftPadding + rightPadding)
     implicitHeight: !visible ? 0 : rule ? 9 : 28
@@ -31,7 +33,7 @@ MenuItem {
             Layout.fillWidth: true
             text: item.text
             font: item.font
-            color: item.enabled ? Theme.text : Theme.textFaint
+            color: !item.enabled ? Theme.textFaint : item.danger ? Theme.danger : Theme.text
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
         }
@@ -47,6 +49,7 @@ MenuItem {
     arrow: null
     background: Rectangle {
         radius: Theme.radiusSmall - 2
-        color: item.highlighted && item.enabled && !item.rule ? Theme.accentSoft : "transparent"
+        color: !(item.highlighted && item.enabled && !item.rule) ? "transparent"
+               : item.danger ? Qt.rgba(Theme.danger.r, Theme.danger.g, Theme.danger.b, 0.16) : Theme.accentSoft
     }
 }

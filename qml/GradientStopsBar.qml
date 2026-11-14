@@ -176,7 +176,7 @@ Item {
         x: root.pad + (root.picked >= 0 && root.picked < root.count ? root.stops[root.picked].position : 0) * root.barWidth - width / 2
         padding: 14
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        background: Panel {}
+        background: Panel { solid: true }
         contentItem: ColorPicker {
             current: root.picked >= 0 && root.picked < root.count ? root.stops[root.picked].color : "black"
             squareHeight: 120

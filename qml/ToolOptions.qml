@@ -129,6 +129,8 @@ Panel {
     readonly property bool softTool: editor.tool === Editor.Blur || editor.tool === Editor.Jumble
     readonly property bool customBrush: editor.brushShape === Editor.CustomBrush
     readonly property bool freehandTool: (editor.tool === Editor.Pencil || editor.tool === Editor.Eraser) && !tilePlacing
+    // Pencil, eraser, blur and jumble: the pen dynamics and the stabilizer apply.
+    readonly property bool penTool: (freehandTool || softTool) && !transforming
     readonly property bool shapeTool: editor.tool === Editor.Rectangle || editor.tool === Editor.Ellipse
     readonly property bool selectionTool: editor.tool === Editor.Select || editor.tool === Editor.Move
                                           || editor.tool === Editor.Lasso || editor.tool === Editor.MagicWand
@@ -167,6 +169,13 @@ Panel {
     padding: 4
     visible: !suppressed
 
+    // For screenshots (`--show popup:NAME`): opens one of the strip's popups.
+    function showPopup(name: string) {
+        const p = ({ dither: ditherPopup, symmetry: symmetryPopup, pen: penPopup, brushes: brushLibrary })[name]
+        if (p)
+            p.open()
+    }
+
     component Separator: Rectangle {
         Layout.preferredWidth: 1
         Layout.preferredHeight: 18
@@ -182,16 +191,42 @@ Panel {
         verticalAlignment: Text.AlignVCenter
     }
 
+    // A window narrower than the options scrolls them sideways (wheel or
+    // drag) instead of cutting them off.
+    Flickable {
+        id: strip
+        anchors.fill: parent
+        anchors.bottomMargin: 1
+        clip: true
+        contentWidth: row.implicitWidth
+        contentHeight: height
+        flickableDirection: Flickable.HorizontalFlick
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: contentWidth > width
+
     RowLayout {
         id: row
         // As wide as its contents and left-aligned: given the strip's whole
         // width, a layout would spread the items out.
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 1
-        width: Math.min(implicitWidth, parent.width)
+        height: strip.height
+        width: implicitWidth
         spacing: 2
+
+        // History first: always in the same place, at the left of the options.
+        IconButton {
+            Layout.leftMargin: 2
+            iconName: "undo-2"
+            tip: "Undo" + Shortcuts.hints.undo
+            enabled: root.editor.canUndo
+            onClicked: root.editor.undo()
+        }
+        IconButton {
+            iconName: "redo-2"
+            tip: "Redo" + Shortcuts.hints.redo
+            enabled: root.editor.canRedo
+            onClicked: root.editor.redo()
+        }
+        Separator {}
 
         // Which tool these options belong to: a label, not a button (no
         // fill, no outline).
@@ -548,12 +583,6 @@ Panel {
             tip: "Use the primary color for this slice"
             onClicked: root.editor.setSliceColor(root.editor.currentSlice, root.editor.primaryColor)
         }
-        IconButton {
-            visible: root.sliceTool && !root.transforming && root.currentSliceData !== null
-            iconName: "trash-2"
-            tip: "Delete this slice (Delete)"
-            onClicked: root.editor.removeSlice(root.editor.currentSlice)
-        }
         Separator { visible: root.sliceTool && !root.transforming && root.currentSliceData !== null }
         OptionPill {
             visible: root.sliceTool && !root.transforming && root.currentSliceData !== null
@@ -583,6 +612,13 @@ Panel {
             text: "Remove key"
             tip: "This frame's own key goes; the key before it applies again"
             onClicked: root.editor.removeSliceKey(root.editor.currentSlice)
+        }
+        Separator { visible: root.sliceTool && !root.transforming && root.currentSliceData !== null }
+        IconButton {
+            visible: root.sliceTool && !root.transforming && root.currentSliceData !== null
+            iconName: "trash-2"
+            tip: "Delete this slice (Delete)"
+            onClicked: root.editor.removeSlice(root.editor.currentSlice)
         }
         Label {
             visible: root.sliceTool && !root.transforming && root.currentSliceData === null
@@ -760,6 +796,7 @@ Panel {
             tip: "Invert the selection" + Shortcuts.hints.invertSelection
             onToggled: root.editor.invertSelection()
         }
+        Separator { visible: root.selectionTool && root.editor.hasSelection && !root.transforming }
         IconButton {
             visible: root.selectionTool && root.editor.hasSelection && !root.transforming
             iconName: "trash-2"
@@ -943,6 +980,24 @@ Panel {
             }
         }
 
+        // Pen dynamics and the stabilizer, for the freehand tools; in a popup (next to symmetry: both are icons that open one).
+        IconButton {
+            id: penButton
+            visible: root.penTool
+            iconName: "pen-tool"
+            tip: "Pen pressure, tilt and the stroke stabilizer"
+            active: penPopup.visible || root.canvas.stabilizer > 0
+            onClicked: if (!penPopup.visible && Date.now() - penPopup.closedAt > 250) penPopup.open()
+
+            PenPopup {
+                id: penPopup
+                editor: root.editor
+                canvas: root.canvas
+                y: penButton.height + 8
+                x: penButton.width / 2 - width / 2
+            }
+        }
+
         Separator {}
 
         // Modifiers and gestures of the current tool.
@@ -956,5 +1011,6 @@ Panel {
                  : root.hints[root.editor.tool] ?? ""
             visible: tip !== ""
         }
+    }
     }
 }

@@ -4,6 +4,7 @@
 #include "core/Commands.h"
 #include "core/Compositor.h"
 #include "core/Document.h"
+#include "core/Easing.h"
 #include "core/PaletteTools.h"
 #include "core/Playback.h"
 #include "core/Raster.h"
@@ -289,6 +290,38 @@ public:
     Q_PROPERTY(bool brushBlend READ brushBlend WRITE setBrushBlend NOTIFY toolOptionsChanged)
     bool brushBlend() const { return m_brushBlend; }
     void setBrushBlend(bool on);
+
+    // Pen dynamics for freehand strokes made with a pen (a mouse always paints at full pressure, no tilt).
+    // Pressure (through pressureCurve: x1, y1, x2, y2 of a core::EasingCurve) can set the brush size (down
+    // to pressureMinSize percent; built-in brushes), the opacity (pencil and eraser) and the color between
+    // the secondary (light) and the primary (firm) color (pencil; the other button swaps them). Opacity and
+    // color are smooth (pressureDither 0; RGBA sprites blend, others take the nearest color) or a dither
+    // pattern (1 Bayer 2x2, 2 Bayer 4x4, 3 Bayer 8x8, 4 blue noise) that shows more pixels the firmer the
+    // press. tiltAngle turns the brush the way the pen leans, on top of brushAngle.
+    Q_PROPERTY(bool pressureSize READ pressureSize WRITE setPressureSize NOTIFY toolOptionsChanged)
+    Q_PROPERTY(bool pressureOpacity READ pressureOpacity WRITE setPressureOpacity NOTIFY toolOptionsChanged)
+    Q_PROPERTY(bool pressureColor READ pressureColor WRITE setPressureColor NOTIFY toolOptionsChanged)
+    Q_PROPERTY(int pressureMinSize READ pressureMinSize WRITE setPressureMinSize NOTIFY toolOptionsChanged)
+    Q_PROPERTY(int pressureDither READ pressureDither WRITE setPressureDither NOTIFY toolOptionsChanged)
+    Q_PROPERTY(QVariantList pressureCurve READ pressureCurve WRITE setPressureCurve NOTIFY toolOptionsChanged)
+    Q_PROPERTY(bool tiltAngle READ tiltAngle WRITE setTiltAngle NOTIFY toolOptionsChanged)
+    bool pressureSize() const { return m_pressureSize; }
+    void setPressureSize(bool on);
+    bool pressureOpacity() const { return m_pressureOpacity; }
+    void setPressureOpacity(bool on);
+    bool pressureColor() const { return m_pressureColor; }
+    void setPressureColor(bool on);
+    int pressureMinSize() const { return m_pressureMinSize; }
+    void setPressureMinSize(int percent);
+    int pressureDither() const { return m_pressureDither; }
+    void setPressureDither(int pattern);
+    QVariantList pressureCurve() const;
+    void setPressureCurve(const QVariantList& curve);
+    bool tiltAngle() const { return m_tiltAngle; }
+    void setTiltAngle(bool on);
+    // The pointer driving the next beginStroke / moveStroke: a pen (with its pressure 0..1 and Qt's tilts
+    // in degrees) or not (a mouse: full pressure, no tilt). Set by the canvas before each of them.
+    void setPenState(bool pen, double pressure, double xTilt = 0, double yTilt = 0);
     // Flip and scale are kept apart from the brush's own pixels (m_customSource), so scaling down and
     // back up loses nothing. The scale is a step: 0 = x1, 2 = x3, -1 = half (every 2nd pixel), -2 = a third.
     Q_PROPERTY(int customBrushScale READ customBrushScale WRITE setCustomBrushScale NOTIFY customBrushChanged)
@@ -1274,6 +1307,9 @@ public:
     void setStrokeModifiers(Qt::KeyboardModifiers modifiers);
     void endStroke();
     bool isStroking() const { return m_stroke.active; }
+    // The stroke paints along the pointer's path (pencil, eraser, blur, jumble, placing tiles), so the
+    // canvas may stabilize it.
+    bool isFreehandStroke() const { return m_stroke.active && (m_stroke.kind == Stroke::Freehand || m_stroke.kind == Stroke::Tiles); }
 
     // Composited current frame (RGBA8888, borrowed; copy before keeping).
     QImage composite() const;
@@ -1449,6 +1485,27 @@ private:
         uint32_t value = 0;
         std::optional<BrushSet> brushes; // custom or turned brush in the document's format
         bool brushOwnColors = false;
+        // Pen dynamics (see setPenState): the size and angle change per stamp (`dynamic`; the stamp's
+        // brush set, if any, in `stampBrushes`, made once per size and angle in `dynamicBrushes`), and
+        // the ink takes its opacity / color from the pressure, pixel by pixel (`penInk`: `inkMask`
+        // marks one stamp's pixels, `strength` the firmest press each pixel got, for opacity).
+        bool pen = false;
+        bool customStamp = false; // the custom brush (its size doesn't follow the pressure)
+        bool dynamic = false;
+        bool dynamicSize = false;
+        bool dynamicAngle = false;
+        bool penInk = false;
+        bool inkOpacity = false;
+        bool inkColor = false;
+        bool inkErases = false;
+        core::Rgba inkHigh, inkLow; // firm and light colors
+        double pressure = 1;        // at the last stamp
+        const BrushSet* stampBrushes = nullptr;
+        std::map<int64_t, BrushSet> dynamicBrushes;
+        core::Image inkMask;
+        core::Image strength;
+        bool inkOwn = false;   // a custom brush in its own colors: they are the firm color, pixel by pixel
+        core::Image inkColors; // one stamp's own colors (the document's format; transparent elsewhere)
         bool lassoTail = false; // the last lasso point follows the pointer (Alt: a straight segment)
         // Dithering: the pixels the stroke covered (Indexed8, 1 = covered;
         // null = not dithering) and what the pattern's skipped ones take
@@ -1585,6 +1642,32 @@ private:
     BrushShape m_brushShape = SquareBrush;
     int m_brushAngle = 0;
     bool m_brushBlend = false;
+    bool m_pressureSize = true;
+    bool m_pressureOpacity = false;
+    bool m_pressureColor = false;
+    int m_pressureMinSize = 0;
+    int m_pressureDither = 0;
+    core::EasingCurve m_pressureCurve;
+    bool m_tiltAngle = false;
+    struct PenState {
+        bool active = false;
+        double pressure = 1;
+        int tiltAngle = 0; // the lean as an angle (core::tiltAngle), kept while the pen stands upright
+    } m_pen;
+    // The brush angle the preview and the brush use: with tilt on and a pen in use, turned the way it leans.
+    int effectiveAngle() const;
+    int m_stampSize = 0; // the size of the stamp being made (pen pressure); 0: m_brushSize
+    int stampSize() const { return m_stampSize > 0 ? m_stampSize : m_brushSize; }
+    // The brushes the stroke's stamps use now (the per-stamp one with pen dynamics).
+    const BrushSet* strokeBrushes() const
+    {
+        return m_stroke.dynamic ? m_stroke.stampBrushes : m_stroke.brushes ? &*m_stroke.brushes : nullptr;
+    }
+    // Sets up the stamp at `pressure` (pen dynamics): its size and brush.
+    void prepareStamp(double pressure);
+    // Stamps the stroke's brush at p in the pen's ink (opacity / color from the pressure level).
+    core::Rect stampInk(core::Point p, double level);
+    uint32_t ownInk(int x, int y, double level, bool dithered, float threshold);
     mutable core::Image m_turned;
     mutable std::array<qint64, 5> m_turnedKey{-1, -1, -1, -1, -1};
     bool m_shading = false;
@@ -1624,6 +1707,8 @@ private:
     bool brushIsImage() const { return angleApplies() || radialTurns(); }
     // The brush's pixels turned by the angle (RGBA; the built-in one in white), kept until something it depends on changes.
     const core::Image& turnedBrush(bool custom) const;
+    // The brush's pixels (RGBA; the built-in one of `size` in white) turned by `angle` degrees.
+    core::Image brushPixels(bool custom, int size, int angle) const;
     bool useCustomBrush(const core::Image& rgba); // trims, checks the size, selects it
     bool customBrushInUse() const;
     // Stamps the brush at p (image coordinates of `img`, at `origin` in the
@@ -1639,8 +1724,8 @@ private:
     // With a `value`, its shape in that value (the dither pass's coverage).
     core::Rect stampStroke(core::Image& img, core::Point p, std::optional<uint32_t> value = {}) const
     {
-        return stampMirrored(img, m_stroke.origin, p, value.value_or(m_stroke.value),
-                             m_stroke.brushes ? &*m_stroke.brushes : nullptr, m_stroke.brushOwnColors && !value);
+        return stampMirrored(img, m_stroke.origin, p, value.value_or(m_stroke.value), strokeBrushes(),
+                             m_stroke.brushOwnColors && !value);
     }
     core::Image m_sheet; // the tileset image being imported (RGBA)
     QString m_sheetName;

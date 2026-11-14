@@ -19,6 +19,7 @@ Popup {
     closePolicy: Popup.CloseOnEscape
 
     background: Panel {
+        solid: true
         padding: 0
         Item {
             anchors.left: parent.left

@@ -17,6 +17,9 @@ Panel {
     signal spriteSizeRequested()
     signal colorModeRequested()
 
+    // For screenshots (`--show popup:grid`).
+    function showGrid() { gridPopup.open() }
+
     docked: true
     dockEdge: Qt.TopEdge
     padding: 0
@@ -41,7 +44,7 @@ Panel {
             id: label
             anchors.centerIn: parent
             color: area.containsMouse ? Theme.text : Theme.textDim
-            font.pixelSize: Theme.fontSizeSmall
+            font.pixelSize: Theme.fontSizeSmall + 1
             font.features: { "tnum": 1 }
         }
         MouseArea {
@@ -90,12 +93,13 @@ Panel {
             tip: "Color mode"
             onClicked: root.colorModeRequested()
         }
+        Separator {}
         Text {
             // Keeps its room, so the right side doesn't shift as it appears.
             Layout.preferredWidth: 90
-            Layout.leftMargin: 8
+            Layout.leftMargin: 4
             text: root.canvas.hovering ? root.canvas.hoverPixel.x + ", " + root.canvas.hoverPixel.y : ""
-            color: Theme.textFaint
+            color: Theme.textDim
             font.pixelSize: Theme.fontSizeSmall
             font.features: { "tnum": 1 }
         }
@@ -131,14 +135,14 @@ Panel {
 
         SmallButton {
             iconName: "grid-3x3"
-            tip: "Pixel grid" + Shortcuts.hints.pixelGrid
+            tip: "Pixel grid: a line between every pixel" + Shortcuts.hints.pixelGrid
             active: root.canvas.showGrid
             onClicked: root.canvas.showGrid = !root.canvas.showGrid
         }
         SmallButton {
             id: gridButton
-            iconName: "grid-2x2"
-            tip: "Grid settings" + (Shortcuts.labels.customGrid ? " (" + Shortcuts.labels.customGrid + " shows the grid)" : "")
+            iconName: "ruler"
+            tip: "Custom grid settings" + (Shortcuts.labels.customGrid ? " (" + Shortcuts.labels.customGrid + " shows the grid)" : "")
             active: root.canvas.showCustomGrid || gridPopup.visible
             onClicked: if (!gridPopup.visible && Date.now() - gridPopup.closedAt > 250) gridPopup.open()
 

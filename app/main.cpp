@@ -52,6 +52,8 @@ int main(int argc, char* argv[])
             shotMode = value();
         } else if (args[i] == QLatin1String("--set")) {
             shotSettings.append(value());
+        } else if (args[i] == QLatin1String("--show")) {
+            value(); // read by Main.qml: opens that menu action's dialog (screenshots)
         } else if (!args[i].startsWith(QLatin1Char('-'))) {
             openQueue.push(args[i]);
         }

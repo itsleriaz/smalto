@@ -43,6 +43,34 @@ jobs:
       - name: Test
         run: build/ci/tests/smalto_tests
 
+  # The manual (manual/, Markdown) built to HTML with mdBook: checked on every push, and
+  # bundled into the packages (they download this artifact into manual/book).
+  manual:
+    runs-on: ubuntu-24.04
+    env:
+      MDBOOK_VERSION: "0.5.4"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mdBook
+        run: |
+          curl -sSL "https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VERSION}/mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz" | tar -xz -C /usr/local/bin
+      - name: Regenerate the shortcut table
+        run: |
+          python3 scripts/manual-shortcuts.py
+          git diff --exit-code manual/src/reference/shortcuts.md || {
+            echo "::error::manual/src/reference/shortcuts.md is out of date: run scripts/manual-shortcuts.py and commit it."
+            exit 1
+          }
+      - name: Check links, images and anchors
+        run: python3 scripts/check-manual.py
+      - name: Build
+        run: mdbook build manual
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manual-html
+          path: manual/book
+          retention-days: 30
+
   # A release tag must match the version in CMakeLists.txt (v0.2.0 <-> VERSION 0.2.0),
   # or the .dmg would carry a different number than the release.
   check-version:
@@ -61,7 +89,7 @@ jobs:
           fi
 
   package-macos:
-    needs: [tests, check-version]
+    needs: [tests, check-version, manual]
     # check-version is skipped on manual runs, which must still go on.
     if: >-
       !cancelled() && needs.tests.result == 'success' &&
@@ -70,6 +98,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: manual-html
+          path: manual/book
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -97,7 +130,7 @@ jobs:
           retention-days: 30
 
   package-windows:
-    needs: [tests, check-version]
+    needs: [tests, check-version, manual]
     if: >-
       !cancelled() && needs.tests.result == 'success' &&
       (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') &&
@@ -105,6 +138,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: manual-html
+          path: manual/book
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -133,7 +171,7 @@ jobs:
   # broken Linux build from blocking the macOS and Windows release (the release is
   # then made without the AppImage).
   package-linux:
-    needs: [tests, check-version]
+    needs: [tests, check-version, manual]
     if: >-
       !cancelled() && needs.tests.result == 'success' &&
       (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') &&
@@ -143,6 +181,11 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: manual-html
+          path: manual/book
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

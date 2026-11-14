@@ -1,11 +1,13 @@
 #pragma once
 
 #include "Editor.h"
+#include "core/Pen.h"
 
 #include <QColor>
 #include <QPointer>
 #include <QHash>
 #include <QQuickRhiItem>
+#include <QElapsedTimer>
 #include <QTimer>
 
 // GPU canvas: shows the editor's composite with pan/zoom, checkerboard and
@@ -69,6 +71,15 @@ class CanvasView : public QQuickRhiItem {
     // Ctrl+Alt (Ctrl+Option on a Mac) and a sideways drag: the brush size (pencil, eraser, blur, jumble).
     Q_PROPERTY(bool resizingBrush READ resizingBrush NOTIFY resizingBrushChanged)
     Q_PROPERTY(bool turningBrush READ turningBrush NOTIFY resizingBrushChanged)
+    // Stroke stabilizer for freehand strokes (mouse or pen): the brush trails the pointer on a string
+    // this many screen pixels long (0: off). See core::Rope.
+    Q_PROPERTY(int stabilizer READ stabilizer WRITE setStabilizer NOTIFY stabilizerChanged)
+    // While a stabilized stroke is drawn: where the brush is and where the pointer is (item coordinates).
+    Q_PROPERTY(bool stabilizing READ stabilizing NOTIFY ropeChanged)
+    Q_PROPERTY(QPointF ropeBrush READ ropeBrush NOTIFY ropeChanged)
+    Q_PROPERTY(QPointF ropePointer READ ropePointer NOTIFY ropeChanged)
+    // The pen's pressure (0..1) as last seen anywhere in the window; -1 before any pen was seen.
+    Q_PROPERTY(qreal penPressure READ penPressure NOTIFY penChanged)
 
 public:
     explicit CanvasView(QQuickItem* parent = nullptr);
@@ -128,6 +139,12 @@ public:
     QColor borderColor() const { return m_border; }
     bool scrollZooms() const { return m_scrollZooms; }
     void setScrollZooms(bool zooms);
+    int stabilizer() const { return m_stabilizer; }
+    void setStabilizer(int length);
+    bool stabilizing() const { return m_roping; }
+    QPointF ropeBrush() const { return m_offset + QPointF(m_rope.x, m_rope.y) * m_zoom; }
+    QPointF ropePointer() const { return m_ropePointer; }
+    qreal penPressure() const { return m_penPressure; }
     void setBorderColor(const QColor& c);
     // The sprite pixel under the pointer (in the tiled view, on whichever
     // copy it's over).
@@ -166,6 +183,9 @@ signals:
     void hoverChanged();
     void layerPickChanged();
     void resizingBrushChanged();
+    void stabilizerChanged();
+    void ropeChanged();
+    void penChanged();
     // Any mouse press on the canvas (e.g. to route Ctrl+C to pixels).
     void pressed();
     // While an effect is previewed the canvas doesn't draw: a left click
@@ -185,6 +205,10 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
+    void itemChange(ItemChange change, const ItemChangeData& value) override;
+    // Watches the window's tablet events for the pen's pressure and tilt: the canvas itself gets
+    // the mouse events Qt makes from them.
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     // Each document's zoom and pan, kept while switching tabs.
@@ -210,6 +234,20 @@ private:
     void updateLayerPick();
 
     QPointer<Editor> m_editor;
+    // The pen, from the window's tablet events.
+    QPointer<QQuickWindow> m_filteredWindow;
+    qreal m_penPressure = -1;
+    qreal m_penXTilt = 0;
+    qreal m_penYTilt = 0;
+    quint64 m_penTimestamp = 0;
+    // Tells the editor whether this mouse event comes from the pen, and its pressure and tilt.
+    void feedPen(const QSinglePointEvent* event);
+    QElapsedTimer m_penClock; // since the last tablet event
+    // Stabilizer: the brush on its string (document coordinates) and the pointer (item coordinates).
+    int m_stabilizer = 0;
+    bool m_roping = false;
+    core::Rope m_rope;
+    QPointF m_ropePointer;
     QPointF m_offset;  // canvas top-left in item coordinates
     qreal m_zoom = 8;  // screen pixels per canvas pixel
     qreal m_targetZoom = 8;

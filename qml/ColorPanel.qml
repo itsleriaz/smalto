@@ -55,6 +55,16 @@ Panel {
     // hidden: switching back and forth then makes none.
     property int swatchPool: 0
     readonly property int paletteSize: editor.palette.length
+    // For screenshots (`--show popup:palette` / `paletteTools`).
+    function showPopup(name: string) {
+        if (name === "palette" || name === "lospec") {
+            if (name === "lospec")
+                palettePopup.tab = 1
+            palettePopup.open()
+        }
+        else if (name === "paletteTools")
+            paletteToolsPopup.open()
+    }
     onPaletteSizeChanged: swatchPool = Math.max(swatchPool, paletteSize)
     property int dragFrom: -1
     property int dropIndex: -1
@@ -109,12 +119,7 @@ Panel {
 
             ColumnLayout {
                 spacing: 2
-                Text {
-                    text: "Color"
-                    color: Theme.text
-                    font.pixelSize: Theme.fontSize
-                    font.weight: Font.DemiBold
-                }
+                PanelTitle { text: "Color" }
                 // Type a color: #rgb, #rrggbb or #rrggbbaa.
                 AppTextField {
                     id: hexField
@@ -202,10 +207,8 @@ Panel {
                 tip: root.paletteCollapsed ? "Show the palette" : "Collapse the palette"
                 onClicked: root.paletteCollapsed = !root.paletteCollapsed
             }
-            Text {
+            PanelTitle {
                 text: "Palette"
-                color: Theme.textDim
-                font.pixelSize: Theme.fontSizeSmall
                 Layout.fillWidth: true
             }
             IconButton {
@@ -248,6 +251,15 @@ Panel {
                     onLoadFileRequested: root.loadPaletteRequested()
                     onSaveFileRequested: root.savePaletteRequested()
                 }
+            }
+            // The palette's own tools (left) apart from what acts on the selected swatch (right).
+            Rectangle {
+                visible: !root.paletteCollapsed
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 14
+                Layout.leftMargin: 2
+                Layout.rightMargin: 2
+                color: Theme.separator
             }
             IconButton {
                 visible: !root.paletteCollapsed

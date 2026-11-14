@@ -65,6 +65,8 @@ foreach ($style in 'Material', 'Imagine', 'Universal', 'Fusion') {
     Remove-Item "$stage\Qt6QuickControls2$style*.dll" -Force -ErrorAction SilentlyContinue
 }
 Copy-Item LICENSE, README.md $stage
+# The manual (Help > Smalto Manual): CI builds it once (manual/book) for every package.
+if (Test-Path manual\book\index.html) { Copy-Item manual\book "$stage\manual" -Recurse }
 
 $zip = Join-Path $dist "Smalto-$version-windows-x64.zip"
 Compress-Archive -Path $stage -DestinationPath $zip -Force

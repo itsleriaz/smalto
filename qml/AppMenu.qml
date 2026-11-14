@@ -8,6 +8,7 @@ Menu {
     padding: 4
     margins: 8
     background: Panel {
+        solid: true
         implicitWidth: 200
         radius: Theme.radiusSmall + 2
         padding: 0

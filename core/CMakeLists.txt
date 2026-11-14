@@ -22,6 +22,7 @@ add_library(smalto_core STATIC
     Smear.h Smear.cpp
     Easing.h Easing.cpp
     Tilemap.h Tilemap.cpp
+    Pen.h Pen.cpp
 )
 
 # Includes are written as "core/Image.h".

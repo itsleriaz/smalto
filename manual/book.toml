@@ -1,0 +1,20 @@
+[book]
+title = "Smalto Manual"
+description = "How to use Smalto, a pixel art editor and animator."
+authors = ["The Smalto contributors"]
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+additional-css = ["theme/smalto.css"]
+# git-repository-url and edit-url-template go here once the public repository exists.
+
+[output.html.search]
+enable = true
+limit-results = 20

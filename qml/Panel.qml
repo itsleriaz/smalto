@@ -12,6 +12,8 @@ Item {
     // a hairline on the inner edge; `bare` draws nothing (the parent paints).
     property bool docked: false
     property bool bare: false
+    // Opaque fill, for what opens over the canvas (menus, dialogs, popups): the translucent one lets the sprite show through.
+    property bool solid: false
     // With `docked`: the edge that meets the rest of the window gets a hairline
     // (Qt.TopEdge or Qt.BottomEdge; 0 for none).
     property int dockEdge: 0
@@ -40,7 +42,7 @@ Item {
         anchors.fill: parent
         radius: root.docked ? 0 : root.radius
         visible: !root.bare
-        color: Theme.panel
+        color: root.solid ? Theme.panelSolid : Theme.panel
         border.color: Theme.panelBorder
         border.width: root.docked ? 0 : 1
     }

@@ -25,7 +25,7 @@ Popup {
     padding: 12
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-    background: Panel {}
+    background: Panel { solid: true }
 
     enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.durationNormal; easing.type: Easing.OutCubic } }
     exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Theme.durationFast } }

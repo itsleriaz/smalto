@@ -25,6 +25,7 @@ AppMenu {
             rule: slot.modelData.separator === true
             text: slot.modelData.text ?? ""
             enabled: !rule && slot.modelData.enabled !== false
+            danger: slot.modelData.danger === true
             hint: root.hintFor(slot.modelData)
             onTriggered: root.chosen(slot.modelData.action, slot.modelData.arg)
         }
@@ -40,6 +41,7 @@ AppMenu {
                         rule: modelData.separator === true
                         text: modelData.text ?? ""
                         enabled: !rule && modelData.enabled !== false
+                        danger: modelData.danger === true
                         hint: root.hintFor(modelData)
                         onTriggered: root.chosen(modelData.action, modelData.arg)
                     }

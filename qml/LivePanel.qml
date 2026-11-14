@@ -242,7 +242,7 @@ Panel {
         anchors.centerIn: Overlay.overlay
         padding: 22
         closePolicy: Popup.CloseOnEscape
-        background: Panel {}
+        background: Panel { solid: true }
         Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.4) }
         onOpened: { presetName.forceActiveFocus(); presetName.selectAll() }
         function start(name: string) {
@@ -556,7 +556,7 @@ Panel {
                             list.push({ text: p.name, action: "preset", arg: p.id, checked: root.s.preset === p.id })
                         list.push({ separator: true }, { text: "Save as preset\u2026", action: "savePreset" })
                         if (saved.length > 0)
-                            list.push({ text: "Delete a preset", submenu: saved.map(u => ({ text: u.name, action: "deletePreset", arg: u.id })) })
+                            list.push({ text: "Delete a preset", submenu: saved.map(u => ({ text: u.name, action: "deletePreset", arg: u.id, danger: true })) })
                         return list
                     }
                     onChosen: (action, arg) => {

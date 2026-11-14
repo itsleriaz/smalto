@@ -40,6 +40,9 @@ Panel {
 
     // The tag bar under the pointer, for the one tooltip they share.
     property MouseArea hoveredTagArea: null
+    property int hoveredTagIndex: -1
+    // The current layer's blend mode and opacity; the classic layers list has its own, so the window hides these then.
+    property bool layerProps: true
     // Tag bars are kept (hidden) when a document with fewer tags comes in.
     property int tagPool: 0
     readonly property int tagCount: editor.tags.length
@@ -198,11 +201,6 @@ Panel {
         id: frameMenu
         AppMenuItem { text: "New Frame"; hint: Shortcuts.labels.newFrame; onTriggered: root.editor.addFrame() }
         AppMenuItem { text: root.frameRange && root.range.width > 1 ? "Duplicate Frames" : "Duplicate Frame"; hint: Shortcuts.labels.duplicateFrame; onTriggered: root.editor.duplicateFrame() }
-        AppMenuItem {
-            text: root.frameRange && root.range.width > 1 ? "Delete Frames" : "Delete Frame"
-            enabled: (root.frameRange ? root.range.width : 1) < root.editor.frameCount
-            onTriggered: root.editor.removeFrame()
-        }
         AppMenuItem { text: "Reverse Frames"; enabled: root.frameRange && root.range.width > 1; onTriggered: root.editor.reverseFrames() }
         AppMenuItem {
             text: root.frameRange && root.range.width > 1 ? "Frame Duration (" + root.range.width + " frames)\u2026" : "Frame Duration\u2026"
@@ -214,11 +212,17 @@ Panel {
         AppMenuItem { text: "Paste"; hint: Shortcuts.labels.paste; enabled: root.editor.canPasteTimeline; onTriggered: root.editor.pasteTimeline() }
         AppMenuSeparator {}
         AppMenuItem { text: "New Tag from Frames"; onTriggered: root.editor.addTag() }
+        AppMenuSeparator {}
+        AppMenuItem {
+            danger: true
+            text: root.frameRange && root.range.width > 1 ? "Delete Frames" : "Delete Frame"
+            enabled: (root.frameRange ? root.range.width : 1) < root.editor.frameCount
+            onTriggered: root.editor.removeFrame()
+        }
     }
 
     AppMenu {
         id: celMenu
-        AppMenuItem { text: "Clear Cels"; onTriggered: root.editor.clearCels() }
         AppMenuItem { text: "Link Cels"; enabled: root.range.width > 1; onTriggered: root.editor.linkCels() }
         AppMenuItem { text: "Unlink Cels"; onTriggered: root.editor.unlinkCels() }
         AppMenuSeparator {}
@@ -227,6 +231,8 @@ Panel {
         AppMenuItem { text: "Paste"; hint: Shortcuts.labels.paste; enabled: root.editor.canPasteTimeline; onTriggered: root.editor.pasteTimeline() }
         AppMenuSeparator {}
         AppMenuItem { text: "New Tag from Frames"; onTriggered: root.editor.addTag() }
+        AppMenuSeparator {}
+        AppMenuItem { text: "Clear Cels"; danger: true; onTriggered: root.editor.clearCels() }
     }
 
     // A Smear group's key (right-click on its diamond).
@@ -243,7 +249,7 @@ Panel {
         AppMenuItem { text: "Copy Pose"; onTriggered: root.editor.copySmearPose(keyMenu.frame) }
         AppMenuItem { text: "Paste Pose"; enabled: root.editor.canPasteSmearPose; onTriggered: root.editor.pasteSmearPose(keyMenu.frame) }
         AppMenuSeparator {}
-        AppMenuItem { text: "Remove Key"; hint: "Delete"; onTriggered: root.editor.removeSmearKey(keyMenu.frame) }
+        AppMenuItem { text: "Remove Key"; danger: true; hint: "Delete"; onTriggered: root.editor.removeSmearKey(keyMenu.frame) }
     }
 
     LayerMenu {
@@ -257,7 +263,8 @@ Panel {
         id: tagMenu
         property int tagIndex: -1
         AppMenuItem { text: "Edit Tag…"; onTriggered: tagEditor.openFor(tagMenu.tagIndex) }
-        AppMenuItem { text: "Delete Tag"; onTriggered: root.editor.removeTag(tagMenu.tagIndex) }
+        AppMenuSeparator {}
+        AppMenuItem { text: "Delete Tag"; danger: true; onTriggered: root.editor.removeTag(tagMenu.tagIndex) }
     }
 
     TagEditor {
@@ -269,7 +276,7 @@ Panel {
     Popup {
         id: durationPopup
         padding: 10
-        background: Panel {}
+        background: Panel { solid: true }
         function openAt(x, y) {
             this.x = x
             this.y = y - 60
@@ -302,7 +309,7 @@ Panel {
     Popup {
         id: onionPopup
         padding: 12
-        background: Panel {}
+        background: Panel { solid: true }
 
         component Stepper: RowLayout {
             id: stepper
@@ -416,37 +423,6 @@ Panel {
                 tip: "Next frame (Right)"
                 onClicked: root.editor.nextFrame()
             }
-            OptionPill {
-                Layout.leftMargin: 6
-                text: "Onion skin"
-                tip: "Show the frames around this one" + Shortcuts.hints.onionSkin
-                checked: root.editor.onionSkin
-                onToggled: root.editor.onionSkin = !root.editor.onionSkin
-            }
-            IconButton {
-                implicitWidth: 18
-                iconName: "chevron-down"
-                tip: "Onion skin settings"
-                active: onionPopup.visible
-                onClicked: {
-                    onionPopup.x = mapToItem(onionPopup.parent, 0, 0).x
-                    onionPopup.y = mapToItem(onionPopup.parent, 0, 0).y - onionPopup.implicitHeight - 6
-                    onionPopup.open()
-                }
-            }
-            NumberControl {
-                Layout.leftMargin: 4
-                value: root.editor.frameDuration
-                from: 1
-                to: 65535
-                step: 10
-                bigStep: 100
-                suffix: " ms"
-                fieldWidth: 70
-                tip: root.frameRange && root.range.width > 1 ? "Duration of the selected frames" : "Frame duration"
-                onMoved: v => root.editor.setFramesDuration(v)
-            }
-
             Separator {}
 
             IconButton {
@@ -465,6 +441,38 @@ Panel {
                 enabled: (root.frameRange ? root.range.width : 1) < root.editor.frameCount
                 onClicked: root.editor.removeFrame()
             }
+            NumberControl {
+                Layout.leftMargin: 4
+                value: root.editor.frameDuration
+                from: 1
+                to: 65535
+                step: 10
+                bigStep: 100
+                suffix: " ms"
+                fieldWidth: 70
+                tip: root.frameRange && root.range.width > 1 ? "Duration of the selected frames" : "Frame duration"
+                onMoved: v => root.editor.setFramesDuration(v)
+            }
+
+            Separator {}
+
+            OptionPill {
+                text: "Onion skin"
+                tip: "Show the frames around this one" + Shortcuts.hints.onionSkin
+                checked: root.editor.onionSkin
+                onToggled: root.editor.onionSkin = !root.editor.onionSkin
+            }
+            IconButton {
+                implicitWidth: 18
+                iconName: "chevron-down"
+                tip: "Onion skin settings"
+                active: onionPopup.visible
+                onClicked: {
+                    onionPopup.x = mapToItem(onionPopup.parent, 0, 0).x
+                    onionPopup.y = mapToItem(onionPopup.parent, 0, 0).y - onionPopup.implicitHeight - 6
+                    onionPopup.open()
+                }
+            }
             // Last before the gap: its width changes while frames play, and
             // nothing should move with it.
             Text {
@@ -472,6 +480,7 @@ Panel {
                 text: "Frame " + (root.editor.currentFrame + 1) + " / " + root.editor.frameCount
                       + (root.editor.rangeType !== Editor.NoRange && root.range.width > 1
                          ? "  ·  " + root.range.width + " selected" : "")
+                      + (root.editor.frameCount === 1 ? "  ·  add a frame to animate" : "")
                 color: Theme.textDim
                 font.pixelSize: Theme.fontSizeSmall
                 font.features: { "tnum": 1 }
@@ -486,6 +495,7 @@ Panel {
                 onClicked: root.layerColumnShown = !root.layerColumnShown
             }
             Text {
+                visible: root.layerProps
                 text: "Layer"
                 color: Theme.textDim
                 font.pixelSize: Theme.fontSizeSmall
@@ -493,6 +503,7 @@ Panel {
             }
             // Blend mode and opacity of the current layer (fixed for a background).
             AppComboBox {
+                visible: root.layerProps
                 implicitWidth: 120
                 model: root.editor.blendModes()
                 currentIndex: root.currentLayerData.blend
@@ -500,6 +511,7 @@ Panel {
                 onActivated: index => root.editor.setLayerBlend(root.editor.currentLayer, index)
             }
             NumberControl {
+                visible: root.layerProps
                 value: root.currentLayerData.opacity
                 enabled: !root.currentLayerData.background
                 opacity: enabled ? 1 : 0.4
@@ -567,7 +579,10 @@ Panel {
 
                 AppToolTip {
                     parent: root.hoveredTagArea ?? root
-                    text: "Drag the ends to resize, the middle to move \u00b7 double-click to edit"
+                    readonly property var hovered: root.editor.tags[root.hoveredTagIndex]
+                    text: (hovered ? "<b>" + hovered.name.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</b> \u00b7 frames "
+                                     + (hovered.from + 1) + "\u2013" + (hovered.to + 1) + "<br>" : "")
+                          + "Drag the ends to resize, the middle to move \u00b7 double-click to edit"
                     active: root.hoveredTagArea !== null && !root.hoveredTagArea.pressed
                 }
                 Repeater {
@@ -607,6 +622,31 @@ Panel {
                             color: tagBar.dark ? "white" : "#141417"
                             font.pixelSize: Theme.fontSize
                             font.weight: Font.DemiBold
+                        }
+
+                        // A tag narrower than its label shows the whole label
+                        // over the neighboring frames while the pointer is on it.
+                        Rectangle {
+                            visible: tagArea.containsMouse && fullLabel.implicitWidth + 10 > tagBar.width
+                            z: 5
+                            width: fullLabel.implicitWidth + 10
+                            height: parent.height
+                            radius: parent.radius
+                            color: tagBar.modelData.color
+                            border.width: 1
+                            border.color: Qt.rgba(0, 0, 0, 0.25)
+                            Text {
+                                id: fullLabel
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: 5
+                                text: tagBar.modelData.name
+                                      + (tagBar.modelData.direction === 1 ? "  \u2190"
+                                         : tagBar.modelData.direction >= 2 ? "  \u21c4" : "")
+                                      + (tagBar.modelData.repeat > 0 ? "  \u00d7" + tagBar.modelData.repeat : "")
+                                color: tagBar.dark ? "white" : "#141417"
+                                font.pixelSize: Theme.fontSize
+                                font.weight: Font.DemiBold
+                            }
                         }
 
                         // Ends resize the tag, the middle moves it; a click
@@ -652,9 +692,10 @@ Panel {
                             }
 
                             onContainsMouseChanged: {
-                                if (containsMouse)
+                                if (containsMouse) {
+                                    root.hoveredTagIndex = tagBar.index
                                     root.hoveredTagArea = tagArea
-                                else if (root.hoveredTagArea === tagArea)
+                                } else if (root.hoveredTagArea === tagArea)
                                     root.hoveredTagArea = null
                             }
                             onPressed: mouse => {
@@ -1031,7 +1072,8 @@ Panel {
                                 anchors.centerIn: parent
                                 text: "\u03b1"
                                 color: layerRow.alphaLock ? Theme.text : Theme.textDim
-                                font.pixelSize: Theme.fontSize
+                                font.pixelSize: Theme.fontSize + 3
+                                font.italic: true
                                 font.weight: layerRow.alphaLock ? Font.DemiBold : Font.Normal
                             }
                             MouseArea {

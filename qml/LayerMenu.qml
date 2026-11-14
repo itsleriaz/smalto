@@ -60,7 +60,6 @@ AppMenu {
         enabled: (root.editor.layers[root.editor.currentLayer] ?? {}).kind === "group"
         onTriggered: root.editor.ungroupLayer()
     }
-    AppMenuItem { text: "Delete Layer"; enabled: root.editor.canRemoveLayer; onTriggered: root.editor.removeLayer() }
     AppMenuSeparator {}
     // Between documents: copy the selected layers here, paste them in this or another document.
     AppMenuItem { text: "Copy Layer"; onTriggered: root.editor.copyLayers() }
@@ -79,10 +78,12 @@ AppMenu {
     AppMenuItem {
         readonly property var layerData: root.editor.layers[root.layerIndex]
         text: "Clear Layer"
+        danger: true
         enabled: layerData !== undefined && layerData.kind !== "group" && !layerData.locked
         onTriggered: {
             root.editor.currentLayer = root.layerIndex
             root.editor.clearLayer()
         }
     }
+    AppMenuItem { text: "Delete Layer"; danger: true; enabled: root.editor.canRemoveLayer; onTriggered: root.editor.removeLayer() }
 }

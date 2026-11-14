@@ -76,6 +76,7 @@ Popup {
         placed = true
     }
     background: Panel {
+        solid: true
         // The top band moves the window.
         Item {
             anchors.left: parent.left

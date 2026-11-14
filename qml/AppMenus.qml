@@ -84,17 +84,22 @@ QtObject {
     property var structure: []
     property var states: ({})
     property string structureJson: ""
+    // The current texts of the destructive entries (the native menu bar colors them).
+    property var dangerTexts: []
     onMenusChanged: refresh()
     Component.onCompleted: refresh()
 
     function entryId(item: var): string { return item.action + ":" + (item.arg === undefined ? "" : item.arg) }
     function refresh() {
         const nextStates = {}
+        const dangerList = []
         const strip = (item) => {
             if (item.separator)
                 return item
             const id = entryId(item)
             nextStates[id] = { text: item.text, enabled: item.enabled !== false, checked: item.checked === true }
+            if (item.danger === true)
+                dangerList.push(item.text)
             const out = { id: id, action: item.action, arg: item.arg, key: item.key, seq: item.seq, role: item.role,
                           hint: item.hint, checkable: item.checked !== undefined }
             if (item.submenu) {
@@ -104,6 +109,7 @@ QtObject {
             return out
         }
         const next = menus.map(m => ({ title: m.title, nativeOnly: m.nativeOnly === true, items: m.items.map(strip) }))
+        dangerTexts = dangerList
         states = nextStates // first, so entries made below start out right
         const json = JSON.stringify(next)
         if (json !== structureJson) {
@@ -142,7 +148,7 @@ QtObject {
             { title: qsTr("File"), items: [
                 { text: qsTr("New Sprite\u2026"), action: "new", key: "newSprite" },
                 { text: qsTr("Open\u2026"), action: "open", key: "open" },
-                ...(recent.length > 0 ? [{ text: qsTr("Open Recent"), submenu: [...recent, sep, { text: qsTr("Clear Recent Files"), action: "clearRecent" }] }] : []),
+                ...(recent.length > 0 ? [{ text: qsTr("Open Recent"), submenu: [...recent, sep, { text: qsTr("Clear Recent Files"), action: "clearRecent", danger: true }] }] : []),
                 { text: qsTr("Import Image as Layer\u2026"), action: "import" },
                 { text: qsTr("Import Tileset Image\u2026"), action: "importTileset" },
                 sep,
@@ -181,14 +187,15 @@ QtObject {
                 { text: qsTr("New Group"), action: "newGroup" },
                 { text: qsTr("New Particle Layer"), action: "newParticles" },
                 { text: qsTr("New Tilemap Layer\u2026"), action: "tilemapNew" },
+                { text: qsTr("Import Image as Layer\u2026"), action: "import" },
+                sep,
                 { text: qsTr("Duplicate Layer"), action: "duplicateLayer" },
                 { text: qsTr("Copy Layer"), action: "copyLayers" },
                 { text: qsTr("Paste Layer"), action: "pasteLayers", enabled: editor.canPasteLayers },
-                { text: qsTr("Delete Layer"), action: "deleteLayer", enabled: editor.canRemoveLayer },
                 sep,
                 { text: qsTr("Group Layers"), action: "groupLayers", key: "groupLayers" },
-                { text: qsTr("Smear"), action: "smearLayers" },
                 { text: qsTr("Ungroup"), action: "ungroupLayer", key: "ungroupLayer", enabled: layer.kind === "group" },
+                { text: qsTr("Smear"), action: "smearLayers" },
                 sep,
                 { text: qsTr("Convert to Tilemap\u2026"), action: "tilemapConvert", enabled: layer.kind === "image" && !layer.background },
                 { text: qsTr("Convert to Normal Layer"), action: "convertToImage", enabled: layer.kind === "tilemap" },
@@ -200,13 +207,13 @@ QtObject {
                 { text: qsTr("Alpha Lock"), action: "layerAlphaLock", key: "alphaLock", checked: layer.alphaLock === true, enabled: layer.kind === "image" },
                 sep,
                 { text: qsTr("Select Pixels"), action: "selectLayerPixels" },
-                { text: qsTr("Clear Layer"), action: "clearLayer", enabled: layer.kind !== "group" && layer.locked !== true },
-                { text: qsTr("Import Image as Layer\u2026"), action: "import" },
+                sep,
+                { text: qsTr("Clear Layer"), action: "clearLayer", danger: true, enabled: layer.kind !== "group" && layer.locked !== true },
+                { text: qsTr("Delete Layer"), action: "deleteLayer", danger: true, enabled: editor.canRemoveLayer },
             ] },
             { title: qsTr("Frame"), items: [
                 { text: qsTr("New Frame"), action: "newFrame", key: "newFrame" },
                 { text: manyFrames ? qsTr("Duplicate Frames") : qsTr("Duplicate Frame"), action: "duplicateFrame", key: "duplicateFrame" },
-                { text: manyFrames ? qsTr("Delete Frames") : qsTr("Delete Frame"), action: "deleteFrame", enabled: frames < editor.frameCount },
                 { text: qsTr("Reverse Frames"), action: "reverseFrames", enabled: manyFrames },
                 { text: qsTr("Frame Duration\u2026"), action: "frameDuration" },
                 sep,
@@ -220,9 +227,11 @@ QtObject {
                 sep,
                 { text: qsTr("New Tag from Frames"), action: "newTag" },
                 sep,
-                { text: cels > 1 ? qsTr("Clear Cels") : qsTr("Clear Cel"), action: "clearCels" },
                 { text: qsTr("Link Cels"), action: "linkCels", enabled: cels > 1 },
                 { text: qsTr("Unlink Cels"), action: "unlinkCels" },
+                sep,
+                { text: cels > 1 ? qsTr("Clear Cels") : qsTr("Clear Cel"), action: "clearCels", danger: true },
+                { text: manyFrames ? qsTr("Delete Frames") : qsTr("Delete Frame"), action: "deleteFrame", danger: true, enabled: frames < editor.frameCount },
             ] },
             { title: qsTr("Tools"), items: [
                 tool(qsTr("Pencil"), "pencil", Editor.Pencil),
@@ -285,6 +294,10 @@ QtObject {
                 { text: qsTr("Previous Tab"), action: "previousTab", key: "previousTab", enabled: editor.documents.length > 1 },
                 sep,
                 ...documents,
+            ] },
+            { title: qsTr("Help"), items: [
+                { text: qsTr("Smalto Manual"), action: "help", seq: "F1" },
+                { text: qsTr("Keyboard Shortcuts"), action: "helpShortcuts" },
             ] },
         ]
     }

@@ -199,7 +199,7 @@ Panel {
         anchors.centerIn: Overlay.overlay
         padding: 16
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        background: Panel {}
+        background: Panel { solid: true }
         Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.4) }
         readonly property var presets: root.editor.smearPresets
         property var previews: ({})
@@ -357,7 +357,7 @@ Panel {
         property string presetId
         property string presetName
         AppMenuItem { text: "Rename\u2026"; onTriggered: nameBox.start("rename", userMenu.presetId, userMenu.presetName) }
-        AppMenuItem { text: "Delete"; onTriggered: root.editor.deleteSmearPreset(userMenu.presetId) }
+        AppMenuItem { text: "Delete"; danger: true; onTriggered: root.editor.deleteSmearPreset(userMenu.presetId) }
     }
     // A name for the motion being saved as a preset, or for one being renamed.
     Popup {
@@ -367,7 +367,7 @@ Panel {
         anchors.centerIn: Overlay.overlay
         padding: 22
         closePolicy: Popup.CloseOnEscape
-        background: Panel {}
+        background: Panel { solid: true }
         Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.4) }
         property string mode: "save"
         property string presetId
@@ -660,6 +660,8 @@ Panel {
                                 implicitWidth: 24
                                 implicitHeight: 24
                                 iconName: "x"
+                                danger: true
+                                tip: "Remove this key"
                                 onClicked: root.editor.removeSmearKey(keyRow.info.frame ?? 0)
                             }
                         }

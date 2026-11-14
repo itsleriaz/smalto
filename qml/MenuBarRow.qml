@@ -17,7 +17,17 @@ Row {
 
     spacing: 0
 
+    // For screenshots (`--show menu:Layer`): opens the menu with that title.
+    function openTitled(title: string) {
+        for (let i = 0; i < titles.count; ++i) {
+            const b = titles.itemAt(i) as MenuButton
+            if (b && b.text === title)
+                b.clicked()
+        }
+    }
+
     Repeater {
+        id: titles
         model: root.menus.filter(m => !m.nativeOnly)
         delegate: MenuButton {
             id: button

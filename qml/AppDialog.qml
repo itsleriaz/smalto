@@ -35,7 +35,7 @@ Popup {
     anchors.centerIn: Overlay.overlay
     padding: 22
     closePolicy: Popup.CloseOnEscape
-    background: Panel {}
+    background: Panel { solid: true }
     Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.4) }
 
     enter: Transition {

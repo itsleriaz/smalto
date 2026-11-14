@@ -49,7 +49,7 @@ Popup {
     padding: 20
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-    background: Panel {}
+    background: Panel { solid: true }
     Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.35) }
 
     component Label: Text {

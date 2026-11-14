@@ -76,6 +76,7 @@ ComboBox {
             ScrollBar.vertical: AppScrollBar {}
         }
         background: Panel {
+        solid: true
             radius: Theme.radiusSmall + 2
             padding: 0
         }

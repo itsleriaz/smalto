@@ -46,7 +46,8 @@ TextField {
         color: field.compact ? Theme.background : Theme.hover
         border.width: 1
         border.color: !field.acceptableInput ? Theme.error
-                    : field.activeFocus || field.compact ? Theme.accent : "transparent"
+                    : field.activeFocus ? Theme.accent
+                    : field.hovered ? Theme.textFaint : Theme.controlBorder
         Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
     }
 }

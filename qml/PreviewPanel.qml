@@ -157,10 +157,8 @@ Panel {
             Layout.fillWidth: true
             spacing: 2
 
-            Text {
+            PanelTitle {
                 text: "Preview"
-                color: Theme.textDim
-                font.pixelSize: Theme.fontSizeSmall
                 Layout.fillWidth: true
             }
             IconButton {

@@ -84,6 +84,7 @@ Popup {
     focus: true
     closePolicy: picking ? Popup.CloseOnEscape : Popup.CloseOnEscape | Popup.CloseOnPressOutside
     background: Panel {
+        solid: true
         padding: 0
         // The top strip, behind the title: drag it to move the window.
         Item {

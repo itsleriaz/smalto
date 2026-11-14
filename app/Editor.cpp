@@ -6,6 +6,7 @@
 #include "core/Effects.h"
 #include "core/Gradient.h"
 #include "core/PaletteTools.h"
+#include "core/Pen.h"
 #include "core/Raster.h"
 #include "core/Symmetry.h"
 #include "core/Text.h"
@@ -2643,9 +2644,17 @@ bool Editor::customBrushInUse() const
 }
 
 // A turned brush only differs from the plain one when it is square or custom and big enough.
+int Editor::effectiveAngle() const
+{
+    if (!m_tiltAngle || !m_pen.active)
+        return m_brushAngle;
+    int angle = ((m_brushAngle + m_pen.tiltAngle) % 360 + 360) % 360;
+    return angle > 180 ? angle - 360 : angle;
+}
+
 bool Editor::angleApplies() const
 {
-    if (m_brushAngle == 0)
+    if (effectiveAngle() == 0)
         return false;
     return customBrushInUse() || (coreBrush() == core::BrushShape::Square && m_brushSize >= 3);
 }
@@ -2653,23 +2662,28 @@ bool Editor::angleApplies() const
 const Image& Editor::turnedBrush(bool custom) const
 {
     const std::array<qint64, 5> key{custom ? 1 : 0, custom ? m_customBrushId : m_brushSize,
-                                    custom ? 0 : int(coreBrush()), m_brushAngle, 0};
+                                    custom ? 0 : int(coreBrush()), effectiveAngle(), 0};
     if (key != m_turnedKey) {
-        Image base;
-        if (custom) {
-            base = m_customBrush;
-        } else {
-            const int size = std::max(1, m_brushSize);
-            base = Image(size, size);
-            const auto& spans = brushSpans(size, coreBrush());
-            for (int y = 0; y < size; ++y)
-                for (int x = spans[size_t(y)].first; x <= spans[size_t(y)].second; ++x)
-                    base.setPixel(x, y, pack({255, 255, 255, 255}));
-        }
-        m_turned = m_brushAngle != 0 ? rotated(base, m_brushAngle, 0) : base;
+        m_turned = brushPixels(custom, m_brushSize, effectiveAngle());
         m_turnedKey = key;
     }
     return m_turned;
+}
+
+Image Editor::brushPixels(bool custom, int size, int angle) const
+{
+    Image base;
+    if (custom) {
+        base = m_customBrush;
+    } else {
+        size = std::max(1, size);
+        base = Image(size, size);
+        const auto& spans = brushSpans(size, coreBrush());
+        for (int y = 0; y < size; ++y)
+            for (int x = spans[size_t(y)].first; x <= spans[size_t(y)].second; ++x)
+                base.setPixel(x, y, pack({255, 255, 255, 255}));
+    }
+    return angle != 0 ? rotated(base, angle, 0) : base;
 }
 
 void Editor::setBrushAngle(int degrees)
@@ -2716,7 +2730,7 @@ bool Editor::previewsBrushColors() const
 
 qint64 Editor::brushKey() const
 {
-    const qint64 angle = angleApplies() ? m_brushAngle + 360 : 0;
+    const qint64 angle = angleApplies() ? effectiveAngle() + 360 : 0;
     if (customBrushInUse())
         return ((qint64(m_customBrushId) * 2 + previewsBrushColors()) * 4 + CustomBrush) * 1000 + angle;
     return (qint64(m_brushSize) * 4 + (m_brushShape == RoundBrush ? RoundBrush : SquareBrush)) * 1000 + angle;
@@ -2743,6 +2757,190 @@ void Editor::setBrushBlend(bool on)
         return;
     m_brushBlend = on;
     emit toolOptionsChanged();
+}
+
+void Editor::setPressureSize(bool on)
+{
+    if (m_pressureSize == on)
+        return;
+    m_pressureSize = on;
+    emit toolOptionsChanged();
+}
+
+void Editor::setPressureOpacity(bool on)
+{
+    if (m_pressureOpacity == on)
+        return;
+    m_pressureOpacity = on;
+    emit toolOptionsChanged();
+}
+
+void Editor::setPressureColor(bool on)
+{
+    if (m_pressureColor == on)
+        return;
+    m_pressureColor = on;
+    emit toolOptionsChanged();
+}
+
+void Editor::setPressureMinSize(int percent)
+{
+    percent = std::clamp(percent, 0, 100);
+    if (m_pressureMinSize == percent)
+        return;
+    m_pressureMinSize = percent;
+    emit toolOptionsChanged();
+}
+
+void Editor::setPressureDither(int pattern)
+{
+    pattern = std::clamp(pattern, 0, 4);
+    if (m_pressureDither == pattern)
+        return;
+    m_pressureDither = pattern;
+    emit toolOptionsChanged();
+}
+
+QVariantList Editor::pressureCurve() const
+{
+    const EasingCurve& c = m_pressureCurve;
+    return {c.x1, c.y1, c.x2, c.y2};
+}
+
+void Editor::setPressureCurve(const QVariantList& curve)
+{
+    if (curve.size() != 4)
+        return;
+    // The handles' x stay within 0..1 (time never runs back), their y within what the editor shows.
+    EasingCurve c{std::clamp(curve[0].toDouble(), 0.0, 1.0), std::clamp(curve[1].toDouble(), -0.25, 1.25),
+                  std::clamp(curve[2].toDouble(), 0.0, 1.0), std::clamp(curve[3].toDouble(), -0.25, 1.25)};
+    if (c == m_pressureCurve)
+        return;
+    m_pressureCurve = c;
+    emit toolOptionsChanged();
+}
+
+void Editor::setTiltAngle(bool on)
+{
+    if (m_tiltAngle == on)
+        return;
+    m_tiltAngle = on;
+    emit toolOptionsChanged();
+}
+
+void Editor::setPenState(bool pen, double pressure, double xTilt, double yTilt)
+{
+    const int angleBefore = effectiveAngle();
+    m_pen.active = pen;
+    m_pen.pressure = pen ? std::clamp(pressure, 0.0, 1.0) : 1.0;
+    if (pen)
+        m_pen.tiltAngle = core::tiltAngle(xTilt, yTilt, m_pen.tiltAngle);
+    if (effectiveAngle() != angleBefore) { // the preview turns with the pen
+        emit brushSizeChanged();
+        refreshOverlay();
+    }
+}
+
+void Editor::prepareStamp(double level)
+{
+    const int size = m_stroke.dynamicSize ? core::pressureSize(m_brushSize, level, m_pressureMinSize) : m_brushSize;
+    m_stampSize = size;
+    if (!m_stroke.dynamic)
+        return;
+    const bool custom = m_stroke.customStamp;
+    const int angle = m_stroke.dynamicAngle ? effectiveAngle() : m_brushAngle;
+    // An image brush where the plain one wouldn't do (as angleApplies / radialTurns decide for the set brush).
+    const bool turnsRadial = m_symmetryRadial >= 2 && m_symmetryRadialTurn;
+    const bool square = coreBrush() == core::BrushShape::Square && size >= 3;
+    if (!custom && !(square && (angle != 0 || turnsRadial))) {
+        m_stroke.stampBrushes = nullptr;
+        return;
+    }
+    const int64_t key = (int64_t(custom) << 40) | (int64_t(custom ? 0 : size) << 16) | int64_t(angle + 360);
+    auto it = m_stroke.dynamicBrushes.find(key);
+    if (it == m_stroke.dynamicBrushes.end()) {
+        BrushSet set;
+        set.rgba = brushPixels(custom, size, angle);
+        set.doc = m_doc.get();
+        set.copies = m_symmetryRadial;
+        it = m_stroke.dynamicBrushes.emplace(key, std::move(set)).first;
+    }
+    m_stroke.stampBrushes = &it->second;
+}
+
+// The pen's ink for a custom brush in its own colors, at one pixel of the stamp: the brush's pixel is the
+// firm color (the secondary the light one), laid over what was there before the stroke at the firmest
+// pressure the pixel got (opacity) or, without opacity, as the brush paints (replaced, or over with Blend).
+uint32_t Editor::ownInk(int x, int y, double level, bool dithered, float threshold)
+{
+    const Rgba own = toRgba(*m_doc, m_stroke.inkColors, x, y);
+    m_stroke.inkColors.setPixel(x, y, transparentValue());
+    Rgba color = own;
+    if (m_stroke.inkColor)
+        color = dithered ? (level > threshold ? own : m_stroke.inkLow) : mixRgba(m_stroke.inkLow, own, level);
+    const Rgba base = toRgba(*m_doc, m_stroke.before, x, y);
+    if (m_stroke.inkOpacity) {
+        const int strength = std::max(int(std::lround(level * 255)), int(m_stroke.strength.pixel(x, y)));
+        m_stroke.strength.setPixel(x, y, uint32_t(strength));
+        if (!dithered)
+            return fromRgba(*m_doc, paintOver(base, color, strength / 255.0));
+        if (!(strength / 255.0 > threshold))
+            return m_stroke.before.pixel(x, y);
+    }
+    return fromRgba(*m_doc, m_brushBlend ? paintOver(base, color, 1) : color);
+}
+
+// The pen's ink: each pixel of the stamp (and its mirror images) gets the color for the pressure level
+// (between the light and the firm color), at the firmest pressure it got in this stroke as its opacity
+// over what was there before the stroke; with a dither pattern, the level instead decides which pixels
+// show the firm color / get painted at all.
+Rect Editor::stampInk(Point p, double level)
+{
+    Image& img = *m_stroke.image;
+    const Point o = m_stroke.origin;
+    const Rect area = stampMirrored(m_stroke.inkMask, o, p, 1, strokeBrushes(), false).intersected(img.bounds());
+    if (m_stroke.inkOwn)
+        stampMirrored(m_stroke.inkColors, o, p, 0, strokeBrushes(), true);
+    const IndexedDither pattern = m_pressureDither == 1 ? IndexedDither::Bayer2
+                                : m_pressureDither == 2 ? IndexedDither::Ordered
+                                : m_pressureDither == 3 ? IndexedDither::Bayer8
+                                : m_pressureDither == 4 ? IndexedDither::BlueNoise : IndexedDither::None;
+    const bool dithered = pattern != IndexedDither::None;
+    const Rgba mixed = m_stroke.inkColor && !dithered ? mixRgba(m_stroke.inkLow, m_stroke.inkHigh, level) : m_stroke.inkHigh;
+    const uint32_t clear = transparentValue();
+    const uint32_t high = m_stroke.inkErases ? clear : fromRgba(*m_doc, m_stroke.inkHigh);
+    const uint32_t low = m_stroke.inkErases ? clear : fromRgba(*m_doc, m_stroke.inkLow);
+    const uint32_t mixedValue = m_stroke.inkErases ? clear : fromRgba(*m_doc, mixed);
+    const int now = int(std::lround(level * 255));
+    for (int y = area.y; y < area.bottom(); ++y) {
+        for (int x = area.x; x < area.right(); ++x) {
+            if (!m_stroke.inkMask.pixel(x, y))
+                continue;
+            m_stroke.inkMask.setPixel(x, y, 0);
+            const float threshold = dithered ? ditherThreshold(pattern, x + o.x, y + o.y) : 0.f;
+            if (m_stroke.inkOwn) {
+                img.setPixel(x, y, ownInk(x, y, level, dithered, threshold));
+                continue;
+            }
+            const bool firm = !m_stroke.inkColor || (dithered ? level > threshold : true);
+            uint32_t value = !m_stroke.inkColor ? high : dithered ? (firm ? high : low) : mixedValue;
+            if (m_stroke.inkOpacity) {
+                const int strength = std::max(now, int(m_stroke.strength.pixel(x, y)));
+                m_stroke.strength.setPixel(x, y, uint32_t(strength));
+                if (dithered) {
+                    if (!(strength / 255.0 > threshold))
+                        value = m_stroke.before.pixel(x, y);
+                } else {
+                    const Rgba base = toRgba(*m_doc, m_stroke.before, x, y);
+                    const Rgba color = m_stroke.inkColor ? mixed : m_stroke.inkHigh;
+                    value = fromRgba(*m_doc, m_stroke.inkErases ? eraseFrom(base, strength / 255.0)
+                                                                : paintOver(base, color, strength / 255.0));
+                }
+            }
+            img.setPixel(x, y, value);
+        }
+    }
+    return area;
 }
 
 void Editor::setBrushColors(bool on)
@@ -3033,10 +3231,11 @@ Rect Editor::stampMirrored(Image& img, Point origin, Point p, uint32_t value, co
     Rect changed;
     const Point at{p.x + origin.x, p.y + origin.y};
     if (!custom) {
-        const auto points = mirrored(at, m_brushSize);
+        const int size = stampSize();
+        const auto points = mirrored(at, size);
         for (size_t i = skipFirst ? 1 : 0; i < points.size(); ++i)
             changed = changed.united(
-                stampBrush(img, {points[i].x - origin.x, points[i].y - origin.y}, m_brushSize, value, coreBrush()));
+                stampBrush(img, {points[i].x - origin.x, points[i].y - origin.y}, size, value, coreBrush()));
         return changed;
     }
     const auto copies = mirrored(at, custom->width(), custom->height());
@@ -3058,22 +3257,23 @@ Rect Editor::softenMirrored(Point p) const
     const Point o = m_stroke.origin;
     const Point at{p.x + o.x, p.y + o.y};
     const core::BrushShape shape = coreBrush();
+    const int size = stampSize();
     Rect changed;
-    if (m_stroke.brushes) { // turned: its shape, and the mirror images of it
-        const BrushSet& set = *m_stroke.brushes;
+    if (const BrushSet* brushes = strokeBrushes()) { // turned: its shape, and the mirror images of it
+        const BrushSet& set = *brushes;
         for (const Copy& copy : mirrored(at, set.width(), set.height())) {
             const Point c{copy.p.x - o.x, copy.p.y - o.y};
             const Image* footprint = &set.at(copy.element, copy.turn).footprint;
             changed = changed.united(m_stroke.jumble
-                                         ? jumbleBrush(img, m_stroke.before, c, m_brushSize, shape, m_stroke.seed, footprint)
-                                         : blurBrush(*m_doc, img, m_stroke.before, c, m_brushSize, shape, footprint));
+                                         ? jumbleBrush(img, m_stroke.before, c, size, shape, m_stroke.seed, footprint)
+                                         : blurBrush(*m_doc, img, m_stroke.before, c, size, shape, footprint));
         }
         return changed;
     }
-    for (const Point q : mirrored(at, m_brushSize)) {
+    for (const Point q : mirrored(at, size)) {
         const Point c{q.x - o.x, q.y - o.y};
-        changed = changed.united(m_stroke.jumble ? jumbleBrush(img, m_stroke.before, c, m_brushSize, shape, m_stroke.seed)
-                                                 : blurBrush(*m_doc, img, m_stroke.before, c, m_brushSize, shape));
+        changed = changed.united(m_stroke.jumble ? jumbleBrush(img, m_stroke.before, c, size, shape, m_stroke.seed)
+                                                 : blurBrush(*m_doc, img, m_stroke.before, c, size, shape));
     }
     return changed;
 }
@@ -3084,15 +3284,16 @@ Rect Editor::shadeMirrored(Point p) const
     const Point o = m_stroke.origin;
     const Point at{p.x + o.x, p.y + o.y};
     Rect changed;
-    if (m_stroke.brushes) {
-        const BrushSet& set = *m_stroke.brushes;
+    if (const BrushSet* brushes = strokeBrushes()) {
+        const BrushSet& set = *brushes;
         for (const Copy& copy : mirrored(at, set.width(), set.height()))
             changed = changed.united(shadeImageBrush(img, m_stroke.before, {copy.p.x - o.x, copy.p.y - o.y},
                                                      set.at(copy.element, copy.turn), m_stroke.ramp, m_stroke.shadeStep));
         return changed;
     }
-    for (const Point q : mirrored(at, m_brushSize))
-        changed = changed.united(shadeBrush(img, m_stroke.before, {q.x - o.x, q.y - o.y}, m_brushSize, m_stroke.ramp,
+    const int size = stampSize();
+    for (const Point q : mirrored(at, size))
+        changed = changed.united(shadeBrush(img, m_stroke.before, {q.x - o.x, q.y - o.y}, size, m_stroke.ramp,
                                             m_stroke.shadeStep, coreBrush()));
     return changed;
 }
@@ -7888,6 +8089,32 @@ void Editor::beginStroke(QPoint pixel, bool secondary, Qt::KeyboardModifiers mod
         m_stroke.shadeStep = secondary ? -1 : 1;
         m_stroke.label = QStringLiteral("Shading");
     }
+    m_stroke.pen = m_pen.active;
+    m_stroke.pressure = m_pen.active ? m_pen.pressure : 1.0;
+    if (m_stroke.pen && m_stroke.kind == Stroke::Freehand) {
+        const bool custom = m_brushShape == CustomBrush && hasCustomBrush() && !softens;
+        m_stroke.customStamp = custom;
+        m_stroke.dynamicSize = m_pressureSize && !custom && m_brushSize > 1;
+        m_stroke.dynamicAngle = m_tiltAngle && (custom || coreBrush() == core::BrushShape::Square);
+        m_stroke.dynamic = m_stroke.dynamicSize || m_stroke.dynamicAngle;
+        const bool inkable = !softens && !shading;
+        m_stroke.inkOpacity = inkable && m_pressureOpacity;
+        m_stroke.inkColor = inkable && m_pressureColor && m_tool == Pencil;
+        m_stroke.penInk = m_stroke.inkOpacity || m_stroke.inkColor;
+        if (m_stroke.penInk) {
+            m_stroke.inkErases = m_tool == Eraser;
+            m_stroke.inkHigh = toRgba(secondary ? m_secondary : m_primary);
+            m_stroke.inkLow = toRgba(secondary ? m_primary : m_secondary);
+            m_stroke.inkMask = Image(image->width(), image->height(), PixelFormat::Indexed8);
+            if (m_stroke.inkOpacity)
+                m_stroke.strength = Image(image->width(), image->height(), PixelFormat::Indexed8);
+            m_stroke.inkOwn = m_stroke.brushOwnColors;
+            if (m_stroke.inkOwn) {
+                m_stroke.inkColors = Image(image->width(), image->height(), image->format());
+                m_stroke.inkColors.clear(transparentValue());
+            }
+        }
+    }
     const Point p{pixel.x() - origin.x, pixel.y() - origin.y};
     m_stroke.start = m_stroke.last = p;
     refreshOverlay(); // hides the Shift-line preview
@@ -8010,7 +8237,20 @@ void Editor::plotSegment(Point from, Point to)
     auto key = [](Point p) { return uint64_t(uint32_t(p.x)) << 32 | uint32_t(p.y); };
     const bool symmetric = perfect && (symmetryElements().size() > 1 || m_symmetryRadial >= 2);
     Rect changed;
+    // Pen dynamics: the pressure runs from the last stamp's to the pointer's along the segment.
+    const bool dynamics = m_stroke.dynamic || m_stroke.penInk;
+    const double pressureFrom = m_stroke.pressure;
+    const double pressureTo = m_stroke.pen ? m_pen.pressure : 1.0;
+    const int steps = std::max(std::abs(to.x - from.x), std::abs(to.y - from.y));
+    int stepIndex = 0;
     bresenham(from, to, [&](Point p) {
+        double level = 1;
+        if (dynamics) {
+            const double pressure = steps ? pressureFrom + (pressureTo - pressureFrom) * stepIndex / steps : pressureTo;
+            ++stepIndex;
+            level = pressureLevel(m_pressureCurve, pressure);
+            prepareStamp(level);
+        }
         if (perfect && p != m_stroke.lastPushed) {
             const int step = ++m_stroke.step;
             const int cornerStep = m_stroke.lastStep;
@@ -8050,10 +8290,13 @@ void Editor::plotSegment(Point from, Point to)
                     ++m_stroke.owners[key({m.x - m_stroke.origin.x, m.y - m_stroke.origin.y})];
         }
         changed = changed.united(m_stroke.softens ? softenMirrored(p)
-                                 : m_stroke.ramp.empty() ? stampStroke(img, p) : shadeMirrored(p));
+                                 : !m_stroke.ramp.empty() ? shadeMirrored(p)
+                                 : m_stroke.penInk ? stampInk(p, level) : stampStroke(img, p));
         if (!m_stroke.covered.isNull())
             stampStroke(m_stroke.covered, p, 1);
     });
+    m_stroke.pressure = pressureTo;
+    m_stampSize = 0;
     ditherStroke(changed);
     changed = wrapStroke(changed);
     restoreOutsideSelection(changed);

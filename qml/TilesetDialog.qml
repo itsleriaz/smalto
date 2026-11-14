@@ -79,7 +79,7 @@ Popup {
     padding: 20
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-    background: Panel {}
+    background: Panel { solid: true }
     Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.35) }
 
     enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.durationNormal; easing.type: Easing.OutCubic } }

@@ -13,6 +13,8 @@ Native.MenuBar {
     required property var entries
     // AppMenus.states: what the entries show now, applied without remaking them.
     property var states: ({})
+    // The destructive entries' texts (AppMenus.dangerTexts): drawn red.
+    property var dangerTexts: []
     signal chosen(string action, var arg)
 
     // Qt only moves the entries with a role (Preferences, About, Quit) to the
@@ -21,8 +23,17 @@ Native.MenuBar {
     // whenever something they show changes). Without it those entries only
     // appeared after switching to another app and back.
     property var host: null
-    onEntriesChanged: reattach.restart()
-    Component.onCompleted: reattach.restart()
+    onEntriesChanged: { reattach.restart(); colorTimer.restart() }
+    onStatesChanged: colorTimer.restart()
+    onDangerTextsChanged: colorTimer.restart()
+    Component.onCompleted: { reattach.restart(); colorTimer.restart() }
+    // After the menus exist (and again after a text changed): Qt's items
+    // reset their titles when remade.
+    Timer {
+        id: colorTimer
+        interval: 120
+        onTriggered: MenuStyle.markDestructive(bar.dangerTexts)
+    }
     Timer {
         id: reattach
         interval: 40

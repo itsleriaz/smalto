@@ -278,6 +278,7 @@ ColumnLayout {
                 y: tidyButton.height + 4
                 AppMenuItem {
                     text: "Remove unused tiles (" + tools.unused + ")"
+                    danger: true
                     enabled: tools.unused > 0
                     onTriggered: root.editor.removeUnusedTiles()
                 }

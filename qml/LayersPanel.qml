@@ -106,11 +106,7 @@ Panel {
         anchors.fill: parent
         spacing: 8
 
-        Text {
-            text: "Layers"
-            color: Theme.textDim
-            font.pixelSize: Theme.fontSizeSmall
-        }
+        PanelTitle { text: "Layers" }
 
         // Blend mode and opacity of the current layer (fixed for a background).
         RowLayout {
@@ -359,7 +355,8 @@ Panel {
                             anchors.centerIn: parent
                             text: "α"
                             color: row.alphaLock ? Theme.text : Theme.textDim
-                            font.pixelSize: Theme.fontSize
+                            font.pixelSize: Theme.fontSize + 3
+                            font.italic: true
                             font.weight: row.alphaLock ? Font.DemiBold : Font.Normal
                         }
                         MouseArea {

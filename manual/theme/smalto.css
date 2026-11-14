@@ -1,0 +1,34 @@
+/* Smalto's look for the manual: the app's Basic theme colors and accent.
+   mdBook's own themes (light, navy) are kept; only the accents change. */
+:root {
+    --smalto-accent: #4f6fe6;
+    --smalto-accent-dark: #6e8bff;
+    --smalto-danger: #d63c3c;
+}
+.light, .rust {
+    --links: var(--smalto-accent);
+    --sidebar-active: var(--smalto-accent);
+    --search-mark-bg: rgba(79, 111, 230, 0.25);
+}
+.navy, .coal, .ayu {
+    --links: var(--smalto-accent-dark);
+    --sidebar-active: var(--smalto-accent-dark);
+    --search-mark-bg: rgba(110, 139, 255, 0.3);
+}
+.content main { max-width: 760px; }
+.content h1 { font-weight: 650; letter-spacing: -0.01em; }
+.content img { border-radius: 8px; }
+/* Keys: <kbd>Ctrl</kbd> + <kbd>S</kbd> */
+kbd {
+    display: inline-block;
+    padding: 0 6px;
+    font: 0.85em/1.6 var(--mono-font);
+    border: 1px solid var(--table-border-color);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--quote-bg);
+}
+/* A destructive action's name, as the app draws it. */
+.danger { color: var(--smalto-danger); }
+/* Screenshots of the app: a hairline and a soft shadow. */
+img.shot { border: 1px solid var(--table-border-color); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); }

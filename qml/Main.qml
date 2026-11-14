@@ -196,6 +196,14 @@ ApplicationWindow {
         property alias shading: appEditor.shading
         property alias brushColors: appEditor.brushColors
         property alias brushBlend: appEditor.brushBlend
+        property alias pressureSize: appEditor.pressureSize
+        property alias pressureOpacity: appEditor.pressureOpacity
+        property alias pressureColor: appEditor.pressureColor
+        property alias pressureMinSize: appEditor.pressureMinSize
+        property alias pressureDither: appEditor.pressureDither
+        property alias pressureCurve: appEditor.pressureCurve
+        property alias tiltAngle: appEditor.tiltAngle
+        property alias stabilizer: canvasView.stabilizer
         property alias dither: appEditor.dither
         property alias ditherPattern: appEditor.ditherPattern
         property alias ditherDensity: appEditor.ditherDensity
@@ -460,6 +468,11 @@ ApplicationWindow {
         appEditor.brushShape = toolSettings.brushShape
         restoreWindow()
         reopenSession()
+        const showAt = Qt.application.arguments.indexOf("--show")
+        if (showAt >= 0 && showAt + 1 < Qt.application.arguments.length) {
+            showTimer.spec = Qt.application.arguments[showAt + 1]
+            showTimer.start()
+        }
         // Documents left by a crash: ask before bringing them back.
         const recovered = appEditor.recoverableDocuments()
         if (recovered.length > 0) {
@@ -692,6 +705,7 @@ ApplicationWindow {
             host: window
             entries: appMenus.structure
             states: appMenus.states
+            dangerTexts: appMenus.dangerTexts
             onChosen: (action, arg) => appMenus.run(action, arg)
         }
     }
@@ -712,6 +726,46 @@ ApplicationWindow {
         else
             appEditor.selectAll()
     }
+    // `--show action[:arg]` (with --screenshot): opens that dialog or menu
+    // action once the window is up, to look at it. "unsaved" is the
+    // Save / Don't Save question.
+    Timer {
+        id: showTimer
+        property string spec
+        interval: 400
+        onTriggered: {
+            const parts = spec.split(":")
+            if (parts[0] === "unsaved")
+                unsavedDialog.open()
+            else if (parts[0] === "stale") {
+                staleDialog.layerName = "Sparks"
+                staleDialog.open()
+            } else if (parts[0] === "menu")
+                menuBarRow.openTitled(parts[1])
+            else if (parts[0] === "popup") {
+                toolOptions.showPopup(parts[1])
+                colorPanel.showPopup(parts[1])
+                if (parts[1] === "grid")
+                    statusBar.showGrid()
+            } else if (parts[0] === "recovery") {
+                recoveryDialog.documents = [{ name: "sprite.aseprite", saved: "yesterday" }]
+                recoveryDialog.open()
+            } else
+                window.menuAction(parts[0], parts[1])
+        }
+    }
+    // Opens the manual (a page of it, or the front page) in the browser.
+    function openManual(page) {
+        if (Manual.open(page))
+            return
+        manualMissingDialog.open()
+    }
+    AppDialog {
+        id: manualMissingDialog
+        title: qsTr("The manual isn't in this build")
+        text: qsTr("This copy of Smalto came without its manual. Build it from the manual folder of the source with mdBook (see the README).")
+    }
+    Shortcut { enabled: !window.nativeMenus; sequence: "F1"; onActivated: window.openManual("") }
     function menuAction(action, arg) {
         switch (action) {
         case "new": newSpriteDialog.open(); break
@@ -726,6 +780,8 @@ ApplicationWindow {
         case "preferences": preferencesDialog.open(); break
         case "quit": window.close(); break
         case "about": aboutDialog.open(); break
+        case "help": window.openManual(""); break
+        case "helpShortcuts": window.openManual("reference/shortcuts.html"); break
         case "tilemapNew": tilesetDialog.openFor(false); break
         case "tilemapConvert": tilesetDialog.openFor(true); break
         case "frameDuration": frameDurationDialog.open(); break
@@ -911,6 +967,7 @@ ApplicationWindow {
             anchors.right: parent.right
             menuStrip: !window.nativeMenus
             stripContent: MenuBarRow {
+                id: menuBarRow
                 x: 6
                 anchors.verticalCenter: parent.verticalCenter
                 menus: appMenus.menus
@@ -959,6 +1016,10 @@ ApplicationWindow {
         LassoOverlay {
             anchors.fill: parent
             editor: appEditor
+            canvas: canvasView
+        }
+        StabilizerOverlay {
+            anchors.fill: parent
             canvas: canvasView
         }
         GradientOverlay {
@@ -1216,6 +1277,7 @@ ApplicationWindow {
             visible: ui.timelineShown > 0
             maximumHeight: window.height * 0.6
             editor: appEditor
+            layerProps: !layersPanel.visible
             onInteracted: window.timelineEdit = true
             onTilesetRequested: convert => tilesetDialog.openFor(convert)
         }

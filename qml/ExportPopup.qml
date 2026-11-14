@@ -80,7 +80,7 @@ Popup {
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
-    background: Panel {}
+    background: Panel { solid: true }
     Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.35) }
 
     enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.durationNormal; easing.type: Easing.OutCubic } }
@@ -284,6 +284,7 @@ Popup {
                 spacing: 2
                 IconButton {
                     iconName: "minus"
+                    tip: qsTr("Smaller")
                     enabled: root.exportScale > 1
                     onClicked: root.exportScale = Math.max(1, root.exportScale - 1)
                 }
@@ -297,6 +298,7 @@ Popup {
                 }
                 IconButton {
                     iconName: "plus"
+                    tip: qsTr("Larger")
                     enabled: root.exportScale < 64
                     onClicked: root.exportScale = Math.min(64, root.exportScale + 1)
                 }

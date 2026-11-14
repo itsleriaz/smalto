@@ -45,6 +45,7 @@ if(SMALTO_BUILD_APP)
         qml/AboutDialog.qml
         qml/FrameDurationDialog.qml
         qml/PanelColumns.qml
+        qml/PanelTitle.qml
         qml/EdgeHandle.qml
         qml/ColorField.qml
         qml/GridHandles.qml
@@ -86,6 +87,8 @@ if(SMALTO_BUILD_APP)
         qml/PaletteToolsPopup.qml
         qml/LospecBrowser.qml
         qml/DitherPopup.qml
+        qml/PenPopup.qml
+        qml/StabilizerOverlay.qml
         qml/SymmetryPopup.qml
         qml/SymmetryHandles.qml
         qml/LiveEmitterHandle.qml
@@ -131,6 +134,8 @@ if(SMALTO_BUILD_APP)
             app/CanvasView.h app/CanvasView.cpp
             app/FileOpenQueue.h app/FileOpenQueue.cpp
             app/RecentFiles.h app/RecentFiles.cpp
+            app/MenuStyle.h app/MenuStyle.cpp
+            app/Manual.h app/Manual.cpp
             app/PaletteLibrary.h app/PaletteLibrary.cpp
             app/LospecClient.h app/LospecClient.cpp
             app/TimelineModel.h app/TimelineModel.cpp
@@ -191,6 +196,11 @@ if(SMALTO_BUILD_APP)
     # The generated QML type registration includes our headers by file name.
     target_include_directories(smalto PRIVATE app)
     target_compile_definitions(smalto PRIVATE SMALTO_VERSION="${PROJECT_VERSION}")
+    # A build from the source tree (not a package, which sets tests OFF) finds
+    # the manual in manual/book; see Manual::folder().
+    if(SMALTO_BUILD_TESTS)
+        target_compile_definitions(smalto PRIVATE SMALTO_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    endif()
     if(MSVC)
         target_compile_options(smalto PRIVATE /utf-8)
     endif()

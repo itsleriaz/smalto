@@ -74,7 +74,7 @@ Panel {
     readonly property var groups: editor.liveLayer ? liveGroups : (editor.smearState.current ?? false) ? smearGroups : drawGroups
 
     readonly property int gap: 2
-    readonly property int separatorHeight: 9
+    readonly property int separatorHeight: 13
 
     function heightFor(columns) {
         let h = padding * 2
@@ -117,7 +117,7 @@ Panel {
                     height: root.separatorHeight
                     Rectangle {
                         anchors.centerIn: parent
-                        width: parent.width - 14
+                        width: parent.width - 12
                         height: 1
                         color: Theme.separator
                     }

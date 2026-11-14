@@ -42,6 +42,13 @@ convert resources/icon/icon-1024.png -resize 512x512 "$ICON"
 # aren't installed and would stop linuxdeploy.
 rm -rf "$QT/plugins/sqldrivers"
 
+# The manual (Help > Smalto Manual), where Manual::folder() looks: ../share/smalto/manual.
+scripts/build-manual.sh
+if [ -f manual/book/index.html ]; then
+  mkdir -p "$BUILD/AppDir/usr/share/smalto"
+  cp -R manual/book "$BUILD/AppDir/usr/share/smalto/manual"
+fi
+
 export QMAKE="$QT/bin/qmake"
 export QML_SOURCES_PATHS="$PWD/qml"
 export LD_LIBRARY_PATH="$QT/lib:${LD_LIBRARY_PATH:-}"

@@ -4,7 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import Smalto
 
-// Undo and redo, then the preferences button (in the macOS menu bar instead,
+// The preferences button (in the macOS menu bar instead,
 // `nativeMenus`). The in-window menus are in the strip above (MenuBarRow).
 Panel {
     id: root
@@ -22,19 +22,6 @@ Panel {
         id: row
         anchors.fill: parent
         spacing: 2
-
-        IconButton {
-            iconName: "undo-2"
-            tip: "Undo" + Shortcuts.hints.undo
-            enabled: root.editor.canUndo
-            onClicked: root.editor.undo()
-        }
-        IconButton {
-            iconName: "redo-2"
-            tip: "Redo" + Shortcuts.hints.redo
-            enabled: root.editor.canRedo
-            onClicked: root.editor.redo()
-        }
 
         IconButton {
             visible: !root.nativeMenus

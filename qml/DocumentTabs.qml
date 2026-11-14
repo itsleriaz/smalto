@@ -38,7 +38,7 @@ Panel {
     // The width the tabs want: each takes `idealTabWidth`, and when the row
     // gives them less they shrink (down to `minTabWidth`) before it scrolls.
     // Not measured from the tabs, so shrinking can't feed back into it.
-    readonly property real idealTabWidth: 150
+    readonly property real idealTabWidth: 170
     readonly property real minTabWidth: 90
     readonly property real tabWidth: {
         const n = list.count
@@ -172,6 +172,17 @@ Panel {
                         if (mouse.button === Qt.LeftButton && !wasDrag)
                             root.editor.currentDocument = tab.index
                     }
+                }
+
+                // The current tab's accent underline.
+                Rectangle {
+                    visible: tab.current
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    width: parent.width - 20
+                    height: 2
+                    radius: 1
+                    color: Theme.accent
                 }
 
 

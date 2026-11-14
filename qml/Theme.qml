@@ -22,9 +22,9 @@ QtObject {
         {
             name: "Basic",
             dark: { bg: "#1b1b20", canvas: "#202026", panel: "#25252b", raised: "#3a3a44", tooltip: "#2c2c33",
-                    text: "#e2e2e8", dim: "#a3a3ad", faint: "#66666f", danger: "#ff8787", error: "#ff6b6b" },
+                    text: "#e2e2e8", dim: "#a3a3ad", faint: "#707078", danger: "#ff8787", error: "#ff6b6b" },
             light: { bg: "#e6e6eb", canvas: "#dadae0", panel: "#fbfbfd", raised: "#ffffff", tooltip: "#fbfbfd",
-                     text: "#1f1f25", dim: "#5c5c66", faint: "#9b9ba5", danger: "#d63c3c", error: "#d93636" },
+                     text: "#1f1f25", dim: "#5c5c66", faint: "#91919b", danger: "#d63c3c", error: "#d93636" },
             fixedOnAccent: true,
             accents: [
                 { name: "Blue", dark: "#6e8bff", light: "#4f6fe6" },
@@ -39,9 +39,9 @@ QtObject {
         {
             name: "Everforest",
             dark: { bg: "#232a2e", canvas: "#2d353b", panel: "#343f44", raised: "#4a555b", tooltip: "#3d484d",
-                    text: "#d3c6aa", dim: "#9da9a0", faint: "#7a8478", danger: "#e67e80", error: "#e67e80" },
+                    text: "#d3c6aa", dim: "#a2aca1", faint: "#838a7d", danger: "#e38986", error: "#e67e80" },
             light: { bg: "#efebd4", canvas: "#e6e2cc", panel: "#fdf6e3", raised: "#fffbef", tooltip: "#fdf6e3",
-                     text: "#5c6a72", dim: "#708089", faint: "#939f91", danger: "#f85552", error: "#e66868" },
+                     text: "#5c6a72", dim: "#63727a", faint: "#859289", danger: "#af5f61", error: "#e66868" },
             accents: [
                 { name: "Green", dark: "#a7c080", light: "#8da101" },
                 { name: "Aqua", dark: "#83c092", light: "#35a77c" },
@@ -55,9 +55,9 @@ QtObject {
         {
             name: "Tokyo Night",
             dark: { bg: "#16161e", canvas: "#1a1b26", panel: "#24283b", raised: "#363b58", tooltip: "#292e42",
-                    text: "#c0caf5", dim: "#9aa5ce", faint: "#565f89", danger: "#f7768e", error: "#f7768e" },
+                    text: "#c0caf5", dim: "#9aa5ce", faint: "#68719b", danger: "#f7768e", error: "#f7768e" },
             light: { bg: "#d5d6db", canvas: "#e1e2e7", panel: "#ebecf0", raised: "#ffffff", tooltip: "#f3f3f6",
-                     text: "#343b58", dim: "#6172b0", faint: "#8990b3", danger: "#f52a65", error: "#c64343" },
+                     text: "#343b58", dim: "#58679e", faint: "#7f86a9", danger: "#cf2d62", error: "#c64343" },
             accents: [
                 { name: "Blue", dark: "#7aa2f7", light: "#2e7de9" },
                 { name: "Purple", dark: "#bb9af7", light: "#9854f1" },
@@ -71,9 +71,9 @@ QtObject {
         {
             name: "Catppuccin",
             dark: { bg: "#181825", canvas: "#1e1e2e", panel: "#313244", raised: "#45475a", tooltip: "#313244",
-                    text: "#cdd6f4", dim: "#a6adc8", faint: "#6c7086", danger: "#f38ba8", error: "#f38ba8" },
+                    text: "#cdd6f4", dim: "#a6adc8", faint: "#777c93", danger: "#f38ba8", error: "#f38ba8" },
             light: { bg: "#dce0e8", canvas: "#e6e9ef", panel: "#f4f5f9", raised: "#ffffff", tooltip: "#eff1f5",
-                     text: "#4c4f69", dim: "#6c6f85", faint: "#9ca0b0", danger: "#d20f39", error: "#d20f39" },
+                     text: "#4c4f69", dim: "#6b6e84", faint: "#8a8da0", danger: "#d20f39", error: "#d20f39" },
             accents: [
                 { name: "Mauve", dark: "#cba6f7", light: "#8839ef" },
                 { name: "Lavender", dark: "#b4befe", light: "#7287fd" },
@@ -88,7 +88,7 @@ QtObject {
         {
             name: "Gruvbox",
             dark: { bg: "#1d2021", canvas: "#282828", panel: "#3c3836", raised: "#504945", tooltip: "#3c3836",
-                    text: "#ebdbb2", dim: "#bdae93", faint: "#7c6f64", danger: "#fb4934", error: "#fb4934" },
+                    text: "#ebdbb2", dim: "#bdae93", faint: "#8e8171", danger: "#f6765a", error: "#fb4934" },
             light: { bg: "#ebdbb2", canvas: "#f2e5bc", panel: "#fbf1c7", raised: "#fdf6d8", tooltip: "#fbf1c7",
                      text: "#3c3836", dim: "#665c54", faint: "#928374", danger: "#9d0006", error: "#cc241d" },
             accents: [

@@ -5,6 +5,8 @@
 #include <QImageReader>
 #include <QPainter>
 #include <QQuickWindow>
+#include <QTabletEvent>
+#include <QPointingDevice>
 #include <rhi/qrhi.h>
 
 #include <algorithm>
@@ -642,6 +644,64 @@ void CanvasView::setScrollZooms(bool zooms)
     emit scrollZoomsChanged();
 }
 
+void CanvasView::setStabilizer(int length)
+{
+    length = std::clamp(length, 0, 100);
+    if (m_stabilizer == length)
+        return;
+    m_stabilizer = length;
+    emit stabilizerChanged();
+}
+
+void CanvasView::itemChange(ItemChange change, const ItemChangeData& value)
+{
+    if (change == ItemSceneChange) {
+        if (m_filteredWindow)
+            m_filteredWindow->removeEventFilter(this);
+        m_filteredWindow = value.window;
+        if (m_filteredWindow)
+            m_filteredWindow->installEventFilter(this);
+    }
+    QQuickRhiItem::itemChange(change, value);
+}
+
+bool CanvasView::eventFilter(QObject* watched, QEvent* event)
+{
+    switch (event->type()) {
+    case QEvent::TabletPress:
+    case QEvent::TabletMove:
+    case QEvent::TabletRelease: {
+        const auto* tablet = static_cast<const QTabletEvent*>(event);
+        m_penPressure = tablet->pressure();
+        m_penXTilt = tablet->xTilt();
+        m_penYTilt = tablet->yTilt();
+        m_penTimestamp = tablet->timestamp();
+        m_penClock.restart();
+        emit penChanged();
+        // Hovering: the brush preview follows the tilt even while the pen stands still.
+        if (m_editor && event->type() == QEvent::TabletMove && tablet->buttons() == Qt::NoButton && !m_editor->isStroking())
+            m_editor->setPenState(true, 0, m_penXTilt, m_penYTilt);
+        break;
+    }
+    default:
+        break;
+    }
+    return QQuickRhiItem::eventFilter(watched, event); // never taken: Qt still makes the mouse events
+}
+
+void CanvasView::feedPen(const QSinglePointEvent* event)
+{
+    if (!m_editor)
+        return;
+    const QPointingDevice* device = event->pointingDevice();
+    const bool pen = m_penPressure >= 0
+        && ((device && (device->type() == QInputDevice::DeviceType::Stylus
+                        || device->type() == QInputDevice::DeviceType::Airbrush))
+            || event->timestamp() == m_penTimestamp
+            || (m_penClock.isValid() && m_penClock.elapsed() < 50)); // made from the tablet event just before
+    m_editor->setPenState(pen, m_penPressure, m_penXTilt, m_penYTilt);
+}
+
 void CanvasView::setBorderColor(const QColor& c)
 {
     if (m_border == c)
@@ -988,7 +1048,15 @@ void CanvasView::mousePressEvent(QMouseEvent* event)
         if (event->button() == Qt::LeftButton)
             emit effectPicked(m_editor->wrapPixel(toPixel(event->position())));
     } else if (m_editor && (event->button() == Qt::LeftButton || event->button() == Qt::RightButton)) {
+        feedPen(event);
         m_editor->beginStroke(toPixel(event->position()), event->button() == Qt::RightButton, event->modifiers());
+        m_roping = m_stabilizer > 0 && m_editor->isFreehandStroke();
+        if (m_roping) {
+            const QPointF d = (event->position() - m_offset) / m_zoom;
+            m_rope = {d.x(), d.y()};
+            m_ropePointer = event->position();
+            emit ropeChanged();
+        }
     }
     event->accept();
 }
@@ -1015,7 +1083,19 @@ void CanvasView::mouseMoveEvent(QMouseEvent* event)
         m_offset += event->position() - m_lastPos;
         emit viewChanged();
         update();
+    } else if (m_editor && m_roping && m_editor->isFreehandStroke()) {
+        // The brush follows on its string; the hover (and the brush preview) is where the brush is.
+        feedPen(event);
+        const QPointF d = (event->position() - m_offset) / m_zoom;
+        if (m_rope.pull(d.x(), d.y(), m_stabilizer / m_zoom))
+            m_editor->moveStroke(QPoint(int(std::floor(m_rope.x)), int(std::floor(m_rope.y))), event->modifiers());
+        m_ropePointer = event->position();
+        emit ropeChanged();
+        m_lastPos = event->position();
+        setHover(ropeBrush());
+        return;
     } else if (m_editor) {
+        feedPen(event);
         m_editor->moveStroke(toPixel(event->position()), event->modifiers());
     }
     m_lastPos = event->position();
@@ -1059,13 +1139,21 @@ void CanvasView::mouseReleaseEvent(QMouseEvent* event)
         updateCursor();
         update();
     }
-    if (m_editor && event->buttons() == Qt::NoButton)
+    if (m_editor && event->buttons() == Qt::NoButton) {
         m_editor->endStroke();
+        if (m_roping) {
+            m_roping = false;
+            emit ropeChanged();
+            setHover(event->position());
+        }
+    }
 }
 
 void CanvasView::hoverMoveEvent(QHoverEvent* event)
 {
     setModifiers(event->modifiers());
+    if (m_editor && !m_editor->isStroking())
+        feedPen(event); // a pen turns the preview with its tilt; a mouse puts it back
     setHover(event->position());
     if (m_editor) {
         m_editor->setHoverInside(true);

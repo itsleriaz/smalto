@@ -2,7 +2,9 @@
 
 #include "Editor.h"
 
+#include <QImage>
 #include <QSignalSpy>
+#include <QTemporaryDir>
 
 namespace {
 
@@ -164,4 +166,124 @@ TEST_CASE("documents: tabs move, the current one stays current")
     editor.moveDocument(0, 5); // out of range: nothing
     CHECK(names()[1] == before[2]);
     CHECK(Editor::fileExists(QStringLiteral("/no/such/file.aseprite")) == false);
+}
+
+// --- Import Sprite Sheet and folders of animations -----------------------------------------------------
+
+namespace {
+
+// A PNG sheet of 3 x 2 tiles of 4 x 4, each filled with its own gray (20, 50, ... 170).
+QString writeSheet(const QTemporaryDir& dir)
+{
+    QImage image(12, 8, QImage::Format_RGBA8888);
+    image.fill(Qt::transparent);
+    for (int row = 0; row < 2; ++row)
+        for (int col = 0; col < 3; ++col) {
+            const int shade = 20 + (row * 3 + col) * 30;
+            for (int y = 0; y < 4; ++y)
+                for (int x = 0; x < 4; ++x)
+                    image.setPixelColor(col * 4 + x, row * 4 + y, QColor(shade, shade, shade));
+        }
+    const QString path = dir.filePath("sheet.png");
+    REQUIRE(image.save(path));
+    return path;
+}
+
+int grayOf(const Editor& editor, int frame, int x, int y)
+{
+    // The composite shows the current frame only.
+    REQUIRE(frame >= 0);
+    return editor.composite().pixelColor(x, y).red();
+}
+
+} // namespace
+
+TEST_CASE("sprite sheet: a new sprite of the tiles, the sheet untouched")
+{
+    QTemporaryDir dir;
+    REQUIRE(dir.isValid());
+    Editor editor;
+    REQUIRE(editor.openPath(writeSheet(dir)));
+    const int tabs = int(editor.documents().size());
+
+    const QVariantMap options{{"width", 4}, {"height", 4}, {"columns", 3}, {"rows", 2}};
+    CHECK(editor.spriteSheetFit(options, false) == QSize(3, 2));
+    REQUIRE(editor.importSpriteSheet(options));
+    CHECK(int(editor.documents().size()) == tabs + 1);
+    CHECK(editor.canvasWidth() == 4);
+    CHECK(editor.canvasHeight() == 4);
+    CHECK(editor.frameCount() == 6);
+    CHECK(grayOf(editor, 0, 0, 0) == 20);
+    editor.setCurrentFrame(4);
+    CHECK(grayOf(editor, 4, 1, 1) == 140); // row 1, column 1
+
+    // The sheet is still in its tab, as it was.
+    editor.setCurrentDocument(tabs - 1);
+    CHECK(editor.canvasWidth() == 12);
+    CHECK(editor.frameCount() == 1);
+}
+
+TEST_CASE("sprite sheet: by columns, with a start offset, skipping empty tiles")
+{
+    QTemporaryDir dir;
+    REQUIRE(dir.isValid());
+    Editor editor;
+    REQUIRE(editor.openPath(writeSheet(dir)));
+
+    // Down the columns first: the second frame is the one below the first.
+    REQUIRE(editor.importSpriteSheet(QVariantMap{{"width", 4}, {"height", 4}, {"columns", 3}, {"rows", 2},
+                                                 {"byColumns", true}}));
+    editor.setCurrentFrame(1);
+    CHECK(grayOf(editor, 1, 0, 0) == 110);
+    editor.setCurrentDocument(0);
+
+    // Starting at x = 4 with a partial tile counted: columns 1 and 2 are whole, a third would be cut off.
+    const QVariantMap shifted{{"x", 4}, {"width", 4}, {"height", 4}};
+    CHECK(editor.spriteSheetFit(shifted, false).width() == 2);
+    CHECK(editor.spriteSheetFit(shifted, true).width() == 2);
+    const QVariantMap wide{{"x", 6}, {"width", 4}, {"height", 4}};
+    CHECK(editor.spriteSheetFit(wide, false).width() == 1);
+    CHECK(editor.spriteSheetFit(wide, true).width() == 2);
+
+    // One 1 x 1 tile from the corner of the last tile; and settings that make no tiles are refused.
+    QSignalSpy errors(&editor, &Editor::errorOccurred);
+    CHECK(editor.importSpriteSheet(QVariantMap{{"x", 11}, {"y", 7}, {"width", 1}, {"height", 1}, {"columns", 1},
+                                               {"rows", 1}, {"skipEmpty", true}}));
+    CHECK(grayOf(editor, 0, 0, 0) == 170);
+    editor.setCurrentDocument(0);
+    CHECK_FALSE(editor.importSpriteSheet(QVariantMap{{"width", 0}, {"height", 4}, {"columns", 1}, {"rows", 1}}));
+    CHECK(errors.count() == 1);
+}
+
+TEST_CASE("image folders: one sprite with a tag for each animation")
+{
+    QTemporaryDir dir;
+    REQUIRE(dir.isValid());
+    const auto save = [&](const QString& name, int shade) {
+        QImage image(4, 4, QImage::Format_RGBA8888);
+        image.fill(QColor(shade, shade, shade));
+        REQUIRE(image.save(dir.filePath(name)));
+    };
+    save("walk_1.png", 10);
+    save("walk_2.png", 20);
+    save("walk_3.png", 30);
+    save("idle.png", 40);
+
+    Editor editor;
+    const QVariantList clips = editor.scanImageFolder(dir.path());
+    REQUIRE(clips.size() == 2);
+    CHECK(clips[0].toMap().value("name").toString() == "idle");
+    CHECK(clips[1].toMap().value("name").toString() == "walk");
+    CHECK(clips[1].toMap().value("count").toInt() == 3);
+
+    REQUIRE(editor.openImageClips(clips, dir.path()));
+    CHECK(editor.frameCount() == 4);
+    const QVariantList tags = editor.tags();
+    REQUIRE(tags.size() == 2);
+    CHECK(tags[0].toMap().value("name").toString() == "idle");
+    CHECK(tags[1].toMap().value("name").toString() == "walk");
+    CHECK(tags[1].toMap().value("from").toInt() == 1);
+    CHECK(tags[1].toMap().value("to").toInt() == 3);
+
+    CHECK(editor.scanImageFolder(dir.filePath("nothing here")).isEmpty());
 }

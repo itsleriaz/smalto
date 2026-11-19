@@ -83,7 +83,7 @@ Popup {
                 NumberControl {
                     value: root.grid.width
                     from: 1
-                    to: 4096
+                    to: root.editor.maxImageSize
                     suffix: " px"
                     tip: qsTr("Cell width")
                     onMoved: v => root.editor.setGrid(root.grid.x, root.grid.y, v, root.grid.height)
@@ -92,7 +92,7 @@ Popup {
                 NumberControl {
                     value: root.grid.height
                     from: 1
-                    to: 4096
+                    to: root.editor.maxImageSize
                     suffix: " px"
                     tip: qsTr("Cell height")
                     onMoved: v => root.editor.setGrid(root.grid.x, root.grid.y, root.grid.width, v)

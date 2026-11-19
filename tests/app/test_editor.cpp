@@ -318,7 +318,7 @@ TEST_CASE("editor: new sprite options")
     CHECK(editor.composite().pixelColor(0, 0) == QColor(0, 0, 0)); // opaque even on index 0
     editor.newSprite({{"colorMode", "grayscale"}, {"width", 99999}});
     CHECK(editor.document().colorMode() == core::ColorMode::Grayscale);
-    CHECK(editor.canvasWidth() == 4096);
+    CHECK(editor.canvasWidth() == Editor::maxImageSize());
 }
 
 TEST_CASE("editor: layer opacity and blend mode")
@@ -596,7 +596,7 @@ TEST_CASE("grid: set, undo and redo, scrubbing merges into one step")
     editor.redo();
     CHECK(editor.grid() == QRect(2, 3, 10, 9));
     editor.setGrid(0, 0, 0, 99999); // sizes are clamped
-    CHECK(editor.grid() == QRect(0, 0, 1, 4096));
+    CHECK(editor.grid() == QRect(0, 0, 1, Editor::maxImageSize()));
     CHECK(spy.count() >= 3);
 }
 
@@ -613,8 +613,8 @@ TEST_CASE("editor: new sprites get the preferred grid size")
     CHECK(editor.grid() == QRect(0, 0, 8, 12));
     // An edited sprite keeps its own grid.
     editor.setGrid(0, 0, 4, 4);
-    editor.setNewGridSize({0, 5000}); // clamped
-    CHECK(editor.newGridSize() == QSize(1, 4096));
+    editor.setNewGridSize({0, 99999}); // clamped
+    CHECK(editor.newGridSize() == QSize(1, Editor::maxImageSize()));
     CHECK(editor.grid() == QRect(0, 0, 4, 4));
 
     // Preferences > Canvas > Reset.

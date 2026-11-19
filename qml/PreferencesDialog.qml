@@ -479,7 +479,7 @@ Popup {
                             NumberControl {
                                 value: root.editor.newGridSize.width
                                 from: 1
-                                to: 4096
+                                to: root.editor.maxImageSize
                                 suffix: " px"
                                 tip: qsTr("Grid cell width for new sprites")
                                 onMoved: v => root.editor.newGridSize = Qt.size(v, root.editor.newGridSize.height)
@@ -488,7 +488,7 @@ Popup {
                             NumberControl {
                                 value: root.editor.newGridSize.height
                                 from: 1
-                                to: 4096
+                                to: root.editor.maxImageSize
                                 suffix: " px"
                                 tip: qsTr("Grid cell height for new sprites")
                                 onMoved: v => root.editor.newGridSize = Qt.size(root.editor.newGridSize.width, v)

@@ -125,8 +125,8 @@ TEST_CASE("clipboard: the size of the image on it, for the New Sprite dialog")
     QGuiApplication::clipboard()->setImage(image);
     CHECK(editor.clipboardImageSize() == QSize(37, 21));
 
-    // Too big for a sprite (the dialog's limit is 4096): none.
-    QGuiApplication::clipboard()->setImage(QImage(5000, 10, QImage::Format_RGBA8888));
+    // Too big for a sprite (the dialog's limit is Editor::maxImageSize): none.
+    QGuiApplication::clipboard()->setImage(QImage(Editor::maxImageSize() + 1, 10, QImage::Format_RGBA8888));
     CHECK_FALSE(editor.clipboardImageSize().isValid());
 
     QGuiApplication::clipboard()->clear();

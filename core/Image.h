@@ -7,6 +7,9 @@
 
 namespace core {
 
+// The largest width or height of a sprite, a canvas, a grid cell or an imported picture.
+inline constexpr int kMaxImageSize = 8192;
+
 enum class PixelFormat : uint8_t {
     Rgba8,     // 32-bit RGBA, straight alpha
     Indexed8,  // palette index

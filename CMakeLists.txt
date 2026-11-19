@@ -80,6 +80,9 @@ if(SMALTO_BUILD_APP)
         qml/TagEditor.qml
         qml/NewSpriteDialog.qml
         qml/SpriteSizeDialog.qml
+        qml/SpriteSheetDialog.qml
+        qml/SpriteSheetHandles.qml
+        qml/ImageFolderDialog.qml
         qml/ColorModeDialog.qml
         qml/CanvasSizeHandles.qml
         qml/CanvasSizePanel.qml

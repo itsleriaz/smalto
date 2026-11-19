@@ -35,9 +35,9 @@ FloatingDialog {
     readonly property var methods: ["nearest", "smooth", "bilinear"]
     readonly property string method: methods[methodChoice.currentIndex]
     onMethodChanged: Qt.callLater(refreshPreview)
-    readonly property bool valid: spriteWidth >= 1 && spriteWidth <= 4096 && spriteHeight >= 1 && spriteHeight <= 4096
+    readonly property bool valid: spriteWidth >= 1 && spriteWidth <= editor.maxImageSize && spriteHeight >= 1 && spriteHeight <= editor.maxImageSize
 
-    function clampSize(v) { return Math.max(1, Math.min(4096, Math.round(v))) }
+    function clampSize(v) { return Math.max(1, Math.min(editor.maxImageSize, Math.round(v))) }
 
     property int widthPct: 100
     property int heightPct: 100
@@ -109,7 +109,7 @@ FloatingDialog {
                     tabStop: true
                     onAccepted: root.apply()
                     from: 1
-                    to: 4096
+                    to: root.editor.maxImageSize
                     bigStep: 10
                     value: root.spriteWidth
                     tip: qsTr("Width")
@@ -126,7 +126,7 @@ FloatingDialog {
                     tabStop: true
                     onAccepted: root.apply()
                     from: 1
-                    to: 4096
+                    to: root.editor.maxImageSize
                     bigStep: 10
                     value: root.spriteHeight
                     tip: qsTr("Height")

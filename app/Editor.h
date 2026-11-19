@@ -34,6 +34,8 @@ class Editor : public QObject {
     Q_OBJECT
     QML_ELEMENT
 
+    // The largest width or height a sprite, canvas, grid cell or imported picture can have.
+    Q_PROPERTY(int maxImageSize READ maxImageSize CONSTANT)
     Q_PROPERTY(int canvasWidth READ canvasWidth NOTIFY canvasSizeChanged)
     Q_PROPERTY(int canvasHeight READ canvasHeight NOTIFY canvasSizeChanged)
     // "rgba" | "grayscale" | "indexed"
@@ -595,9 +597,10 @@ public:
     // False when the clipboard has no image.
     Q_INVOKABLE bool pasteAsNewLayer();
     Q_INVOKABLE bool pasteAsNewSprite();
+    static int maxImageSize() { return core::kMaxImageSize; }
     bool canPaste() const;
     // The size of the image on the system clipboard (invalid when there is none, or it is
-    // over 4096 x 4096): the New Sprite dialog starts at it.
+    // over kMaxImageSize square): the New Sprite dialog starts at it.
     Q_INVOKABLE QSize clipboardImageSize() const;
 
     // --- floating pixels: paste and transform ---------------------------------
@@ -784,7 +787,7 @@ public:
 
     Q_INVOKABLE void newDocument(int width, int height);
     // New sprite. Options (all optional):
-    //   width, height: 1..4096 (default 64)
+    //   width, height: 1..maxImageSize (default 64)
     //   colorMode: "rgba" | "grayscale" | "indexed"
     //   background: "transparent" | "white" | "black" (opaque: a Background layer)
     //   frames: 1..9999
@@ -888,6 +891,19 @@ public:
     Q_INVOKABLE bool openPath(const QString& path);
     // Image files as the frames of a new, unsaved document.
     Q_INVOKABLE bool openImages(const QStringList& paths);
+    // Import a sprite sheet: the current frame of the current document cut into tiles that become the
+    // frames of a new, unsaved document. options: x, y, width, height (the first tile), padX, padY
+    // (space between tiles), columns, rows, byColumns (frames run down the columns first), skipEmpty
+    // (fully transparent tiles are left out). The sheet's own pixels are untouched.
+    Q_INVOKABLE bool importSpriteSheet(const QVariantMap& options);
+    // The columns and rows (as width and height) that fit the current frame for options' x, y, width,
+    // height, padX and padY; with `partial`, a tile cut off by the edge counts.
+    Q_INVOKABLE QSize spriteSheetFit(const QVariantMap& options, bool partial) const;
+    // The animations in a folder and its subfolders: [{name, count (frames), files}], by name.
+    Q_INVOKABLE QVariantList scanImageFolder(const QString& folder) const;
+    // One new, unsaved document of those animations (clips: [{name, files}], as scanImageFolder gives
+    // them), a tag for each. `folder` names the document.
+    Q_INVOKABLE bool openImageClips(const QVariantList& clips, const QString& folder);
     // The numbered image sequence `path` belongs to (just itself if none).
     Q_INVOKABLE QStringList imageSequence(const QString& path) const;
     // True for the image types openPath and importLayer read.
@@ -1957,7 +1973,7 @@ private:
     } m_exportPreview;
     core::Point m_copiedOrigin;
     void startFloat(const core::Image& source, core::Rect box, const char* label);
-    bool clipboardRgba(core::Image& out) const; // the clipboard's image, at most 4096 x 4096
+    bool clipboardRgba(core::Image& out) const; // the clipboard's image, at most maxImageSize x maxImageSize
     void renderFloat();
     // `useSelection` false: the whole cel even with a selection (import).
     bool liftForTransform(const char* label, bool useSelection = true);

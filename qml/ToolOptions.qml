@@ -836,7 +836,7 @@ Panel {
             Layout.leftMargin: 8
             value: root.editor.transformBox.width
             from: 1
-            to: 4096
+            to: root.editor.maxImageSize
             suffix: " px"
             tip: "Width"
             onMoved: v => root.editor.resizeTransform(v, root.keepRatio ? root.ratioSize(v, true) : root.editor.transformBox.height)
@@ -849,7 +849,7 @@ Panel {
             visible: root.transforming
             value: root.editor.transformBox.height
             from: 1
-            to: 4096
+            to: root.editor.maxImageSize
             suffix: " px"
             tip: "Height"
             onMoved: v => root.editor.resizeTransform(root.keepRatio ? root.ratioSize(v, false) : root.editor.transformBox.width, v)

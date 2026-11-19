@@ -175,8 +175,8 @@ void Editor::newDocument(int width, int height)
 
 void Editor::newSprite(const QVariantMap& options)
 {
-    const int width = std::clamp(options.value("width", 64).toInt(), 1, 4096);
-    const int height = std::clamp(options.value("height", 64).toInt(), 1, 4096);
+    const int width = std::clamp(options.value("width", 64).toInt(), 1, kMaxImageSize);
+    const int height = std::clamp(options.value("height", 64).toInt(), 1, kMaxImageSize);
     const QString modeName = options.value("colorMode", "rgba").toString();
     const ColorMode mode = modeName == "grayscale" ? ColorMode::Grayscale
                          : modeName == "indexed"   ? ColorMode::Indexed
@@ -534,7 +534,7 @@ void Editor::resetAutosaveDelay() { setAutosaveDelay(kAutosaveDelay); }
 
 void Editor::setNewGridSize(QSize size)
 {
-    size = {std::clamp(size.width(), 1, 4096), std::clamp(size.height(), 1, 4096)};
+    size = {std::clamp(size.width(), 1, kMaxImageSize), std::clamp(size.height(), 1, kMaxImageSize)};
     if (size == m_newGridSize)
         return;
     m_newGridSize = size;
@@ -722,6 +722,123 @@ bool Editor::openImages(const QStringList& paths)
         if (name.isEmpty())
             name = QFileInfo(paths.first()).completeBaseName();
     }
+    setDocument(std::move(doc), {}, name);
+    return true;
+}
+
+namespace {
+
+constexpr int kMaxSheetFrames = 4096;
+
+formats::SheetSlice sheetSliceFrom(const QVariantMap& o)
+{
+    formats::SheetSlice s;
+    s.x = o.value("x", 0).toInt();
+    s.y = o.value("y", 0).toInt();
+    s.width = o.value("width", 16).toInt();
+    s.height = o.value("height", 16).toInt();
+    s.padX = std::max(0, o.value("padX", 0).toInt());
+    s.padY = std::max(0, o.value("padY", 0).toInt());
+    s.columns = o.value("columns", 1).toInt();
+    s.rows = o.value("rows", 1).toInt();
+    s.order = o.value("byColumns", false).toBool() ? formats::SheetOrder::Columns
+                                                   : formats::SheetOrder::Rows;
+    return s;
+}
+
+} // namespace
+
+QSize Editor::spriteSheetFit(const QVariantMap& options, bool partial) const
+{
+    if (!m_doc)
+        return {};
+    const auto fit = formats::fitSheetSlice(m_doc->width(), m_doc->height(), sheetSliceFrom(options), partial);
+    return {fit.columns, fit.rows};
+}
+
+bool Editor::importSpriteSheet(const QVariantMap& options)
+{
+    endStroke();
+    commitFloating();
+    const formats::SheetSlice slice = sheetSliceFrom(options);
+    if (slice.width < 1 || slice.height < 1 || slice.columns < 1 || slice.rows < 1
+        || int64_t(slice.columns) * slice.rows > kMaxSheetFrames) {
+        emit errorOccurred(tr("The sprite sheet settings don't make 1 to %1 tiles.").arg(kMaxSheetFrames));
+        return false;
+    }
+    if (slice.width > kMaxImageSize || slice.height > kMaxImageSize) {
+        emit errorOccurred(tr("The tiles are too big."));
+        return false;
+    }
+    Image sheet(m_doc->width(), m_doc->height());
+    sheet.clear(0);
+    renderFrame(*m_doc, m_currentFrame, sheet, m_doc->bounds());
+    const bool skipEmpty = options.value("skipEmpty", false).toBool();
+    std::vector<formats::ImageFrame> frames;
+    for (Image& tile : formats::sliceSheet(sheet, slice)) {
+        if (skipEmpty) {
+            bool empty = true;
+            for (int y = 0; y < tile.height() && empty; ++y)
+                for (int x = 0; x < tile.width() && empty; ++x)
+                    empty = (tile.pixel(x, y) >> 24) == 0;
+            if (empty)
+                continue;
+        }
+        frames.push_back({std::move(tile), 100});
+    }
+    if (frames.empty()) {
+        emit errorOccurred(tr("Every tile is empty."));
+        return false;
+    }
+    // Frames keep the sheet's own timing when it has some: the current frame's.
+    const int duration = m_doc->frame(m_currentFrame).durationMs;
+    for (auto& f : frames)
+        f.durationMs = duration;
+    QString name = QFileInfo(fileName()).completeBaseName();
+    if (name.isEmpty())
+        name = fileName();
+    setDocument(formats::documentFromImages(std::move(frames)), {}, name);
+    return true;
+}
+
+QVariantList Editor::scanImageFolder(const QString& folder) const
+{
+    QVariantList out;
+    for (const formats::ImageClip& clip : formats::findImageClips(toFsPath(folder))) {
+        QStringList files;
+        for (const auto& p : clip.files)
+            files.append(fromFsPath(p));
+        QVariantMap m;
+        m["name"] = QString::fromStdString(clip.name);
+        m["count"] = int(clip.files.size());
+        m["files"] = files;
+        out.append(m);
+    }
+    return out;
+}
+
+bool Editor::openImageClips(const QVariantList& clips, const QString& folder)
+{
+    std::vector<formats::ImageClip> found;
+    for (const QVariant& v : clips) {
+        const QVariantMap m = v.toMap();
+        formats::ImageClip clip;
+        clip.name = m.value("name").toString().toStdString();
+        for (const QString& f : m.value("files").toStringList())
+            clip.files.push_back(toFsPath(f));
+        if (!clip.files.empty())
+            found.push_back(std::move(clip));
+    }
+    std::string error;
+    auto doc = formats::loadClipsDocument(found, &error);
+    if (!doc) {
+        emit errorOccurred(tr("Couldn't open %1: %2.")
+                               .arg(QFileInfo(folder).fileName(), QString::fromStdString(error)));
+        return false;
+    }
+    QString name = QFileInfo(folder).fileName();
+    if (name.isEmpty())
+        name = tr("Animations");
     setDocument(std::move(doc), {}, name);
     return true;
 }
@@ -2539,7 +2656,7 @@ QRect Editor::grid() const
 // One undo step; scrubbing the fields merges into it.
 void Editor::setGrid(int x, int y, int width, int height)
 {
-    const Rect after{x, y, std::clamp(width, 1, 4096), std::clamp(height, 1, 4096)};
+    const Rect after{x, y, std::clamp(width, 1, kMaxImageSize), std::clamp(height, 1, kMaxImageSize)};
     if (after == m_doc->grid)
         return;
     execute(std::make_unique<SetGridCommand>(m_doc->grid, after), continuing(QStringLiteral("grid")));
@@ -4747,8 +4864,8 @@ static Resample resampleFor(const QString& method)
 
 void Editor::resizeSprite(int width, int height, const QString& method)
 {
-    width = std::clamp(width, 1, 4096);
-    height = std::clamp(height, 1, 4096);
+    width = std::clamp(width, 1, kMaxImageSize);
+    height = std::clamp(height, 1, kMaxImageSize);
     endStroke();
     commitFloating();
     if (width == m_doc->width() && height == m_doc->height())
@@ -4760,8 +4877,8 @@ void Editor::resizeSprite(int width, int height, const QString& method)
 
 QString Editor::spriteSizePreview(int width, int height, int maxSide, const QString& method)
 {
-    width = std::clamp(width, 1, 4096);
-    height = std::clamp(height, 1, 4096);
+    width = std::clamp(width, 1, kMaxImageSize);
+    height = std::clamp(height, 1, kMaxImageSize);
     const double fit = std::min(1.0, double(std::max(1, maxSide)) / double(std::max(width, height)));
     const int w = std::max(1, int(std::lround(width * fit)));
     const int h = std::max(1, int(std::lround(height * fit)));
@@ -4776,7 +4893,7 @@ QString Editor::spriteSizePreview(int width, int height, int maxSide, const QStr
 
 void Editor::resizeCanvas(const QRect& bounds)
 {
-    const Rect r{bounds.x(), bounds.y(), std::clamp(bounds.width(), 1, 4096), std::clamp(bounds.height(), 1, 4096)};
+    const Rect r{bounds.x(), bounds.y(), std::clamp(bounds.width(), 1, kMaxImageSize), std::clamp(bounds.height(), 1, kMaxImageSize)};
     endStroke();
     commitFloating();
     if (r.x == 0 && r.y == 0 && r.w == m_doc->width() && r.h == m_doc->height())
@@ -9226,7 +9343,7 @@ void Editor::cut()
 QSize Editor::clipboardImageSize() const
 {
     const QImage image = QGuiApplication::clipboard()->image();
-    if (image.isNull() || image.width() > 4096 || image.height() > 4096)
+    if (image.isNull() || image.width() > kMaxImageSize || image.height() > kMaxImageSize)
         return {};
     return image.size();
 }
@@ -9237,7 +9354,7 @@ bool Editor::clipboardRgba(Image& out) const
     if (image.isNull())
         return false;
     image = image.convertToFormat(QImage::Format_RGBA8888);
-    if (image.width() > 4096 || image.height() > 4096)
+    if (image.width() > kMaxImageSize || image.height() > kMaxImageSize)
         return false;
     out = Image(image.width(), image.height());
     for (int y = 0; y < image.height(); ++y)
@@ -9372,7 +9489,7 @@ void Editor::setTransformBox(const QRect& box)
 {
     if (!m_float.active)
         return;
-    const Rect b{box.x(), box.y(), std::clamp(box.width(), 1, 4096), std::clamp(box.height(), 1, 4096)};
+    const Rect b{box.x(), box.y(), std::clamp(box.width(), 1, kMaxImageSize), std::clamp(box.height(), 1, kMaxImageSize)};
     if (b == m_float.box)
         return;
     m_float.box = b;
@@ -9437,8 +9554,8 @@ void Editor::resizeTransform(int width, int height)
 {
     if (!m_float.active)
         return;
-    width = std::clamp(width, 1, 4096);
-    height = std::clamp(height, 1, 4096);
+    width = std::clamp(width, 1, kMaxImageSize);
+    height = std::clamp(height, 1, kMaxImageSize);
     setTransformBox([&] {
         const Rect b = boxKeepingPivot(width, height, m_float.angle);
         return QRect(b.x, b.y, b.w, b.h);

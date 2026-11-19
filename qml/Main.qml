@@ -538,6 +538,16 @@ ApplicationWindow {
         onAccepted: if (appEditor.loadTilesetSheet(selectedFile)) tilesetImportDialog.start()
     }
 
+    FolderDialog {
+        id: importFolderChoice
+        title: qsTr("Import Folder as Animation")
+        onAccepted: imageFolderDialog.start(appEditor.toLocalPath(selectedFolder))
+    }
+    ImageFolderDialog {
+        id: imageFolderDialog
+        editor: appEditor
+    }
+
     AppDialog {
         id: sequenceDialog
         property string path
@@ -679,6 +689,13 @@ ApplicationWindow {
         y: window.floatingY(height)
     }
 
+    SpriteSheetDialog {
+        id: spriteSheetDialog
+        editor: appEditor
+        x: window.floatingX
+        y: window.floatingY(height)
+    }
+
     // Floating like the effects.
     ColorModeDialog {
         id: colorModeDialog
@@ -774,6 +791,8 @@ ApplicationWindow {
         case "import": importDialog.open(); break
         case "exportTileset": tilesetExportDialog.start(); break
         case "importTileset": tilesetImportFile.open(); break
+        case "importSpriteSheet": spriteSheetDialog.open(); break
+        case "importFolder": importFolderChoice.open(); break
         case "save": window.save(); break
         case "saveAs": window.saveAs(); break
         case "export": exportPopup.open(); break
@@ -1059,6 +1078,12 @@ ApplicationWindow {
             editor: appEditor
             canvas: canvasView
             enabledHere: !canvasSizer.active && !appEditor.floating
+        }
+        SpriteSheetHandles {
+            anchors.fill: parent
+            editor: appEditor
+            canvas: canvasView
+            dialog: spriteSheetDialog
         }
         // Below every panel (its shade and click guard fill the window).
         CanvasSizeHandles {

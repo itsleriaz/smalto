@@ -58,7 +58,7 @@ Panel {
         NumberControl {
             value: root.bounds.width
             from: 1
-            to: 4096
+            to: root.sizer.editor.maxImageSize
             suffix: " px"
             tip: "Width"
             onMoved: v => root.sizer.setSize(v, root.bounds.height)
@@ -67,7 +67,7 @@ Panel {
         NumberControl {
             value: root.bounds.height
             from: 1
-            to: 4096
+            to: root.sizer.editor.maxImageSize
             suffix: " px"
             tip: "Height"
             onMoved: v => root.sizer.setSize(root.bounds.width, v)

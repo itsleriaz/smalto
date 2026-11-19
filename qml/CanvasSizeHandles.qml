@@ -33,7 +33,7 @@ Item {
         editor.resizeCanvas(bounds)
     }
 
-    function clampSize(v) { return Math.max(1, Math.min(4096, Math.round(v))) }
+    function clampSize(v) { return Math.max(1, Math.min(editor.maxImageSize, Math.round(v))) }
     // A typed size, placed by the anchor.
     function setSize(w, h) {
         w = clampSize(w)
@@ -106,8 +106,9 @@ Item {
         } else {
             w = h * ratio
         }
-        // Within the 4096 limit, in the same shape.
-        const k = Math.min(1, 4096 / w, 4096 / h)
+        // Within the size limit, in the same shape.
+        const limit = editor.maxImageSize
+        const k = Math.min(1, limit / w, limit / h)
         w = Math.max(1, Math.round(w * k))
         h = Math.max(1, Math.round(h * k))
         const right = s.x + s.width, bottom = s.y + s.height
@@ -119,10 +120,10 @@ Item {
         const d = delta(mouseArea, mouse)
         const s = startBounds
         let l = s.x, t = s.y, r = s.x + s.width, b = s.y + s.height
-        if (hx < 0) l = Math.max(r - 4096, Math.min(l + d.x, r - 1))
-        if (hx > 0) r = Math.min(l + 4096, Math.max(r + d.x, l + 1))
-        if (hy < 0) t = Math.max(b - 4096, Math.min(t + d.y, b - 1))
-        if (hy > 0) b = Math.min(t + 4096, Math.max(b + d.y, t + 1))
+        if (hx < 0) l = Math.max(r - editor.maxImageSize, Math.min(l + d.x, r - 1))
+        if (hx > 0) r = Math.min(l + editor.maxImageSize, Math.max(r + d.x, l + 1))
+        if (hy < 0) t = Math.max(b - editor.maxImageSize, Math.min(t + d.y, b - 1))
+        if (hy > 0) b = Math.min(t + editor.maxImageSize, Math.max(b + d.y, t + 1))
         bounds = (mouse.modifiers & Qt.ShiftModifier) ? proportional(s, l, t, r, b, hx, hy)
                                                        : Qt.rect(l, t, r - l, b - t)
     }

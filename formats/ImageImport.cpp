@@ -316,24 +316,8 @@ std::vector<std::filesystem::path> findImageSequence(const std::filesystem::path
     return out;
 }
 
-std::unique_ptr<Document> loadImageDocument(const std::vector<std::filesystem::path>& files, std::string* error)
+std::unique_ptr<Document> documentFromImages(std::vector<ImageFrame> frames)
 {
-    if (files.empty()) {
-        fail(error, "no files");
-        return nullptr;
-    }
-    std::vector<ImageFrame> frames;
-    for (const auto& path : files) {
-        std::string message;
-        auto loaded = loadImageFrames(path, &message);
-        if (!loaded) {
-            fail(error, path.filename().string() + ": " + message);
-            return nullptr;
-        }
-        for (ImageFrame& frame : *loaded)
-            frames.push_back(std::move(frame));
-    }
-
     int w = 1, h = 1;
     for (const ImageFrame& frame : frames) {
         w = std::max(w, frame.image.width());
@@ -364,6 +348,253 @@ std::unique_ptr<Document> loadImageDocument(const std::vector<std::filesystem::p
     if (doc->palette.size() == 0)
         doc->palette = Palette::defaultPalette();
     return doc;
+}
+
+std::unique_ptr<Document> loadImageDocument(const std::vector<std::filesystem::path>& files, std::string* error)
+{
+    if (files.empty()) {
+        fail(error, "no files");
+        return nullptr;
+    }
+    std::vector<ImageFrame> frames;
+    for (const auto& path : files) {
+        std::string message;
+        auto loaded = loadImageFrames(path, &message);
+        if (!loaded) {
+            fail(error, path.filename().string() + ": " + message);
+            return nullptr;
+        }
+        for (ImageFrame& frame : *loaded)
+            frames.push_back(std::move(frame));
+    }
+    return documentFromImages(std::move(frames));
+}
+
+std::unique_ptr<Document> loadClipsDocument(const std::vector<ImageClip>& clips, std::string* error)
+{
+    std::vector<ImageFrame> frames;
+    std::vector<Tag> tags;
+    // The colors "New Tag" cycles through, so imported tags look like ones made by hand.
+    static constexpr uint32_t kTagColors[] = {0x6e8bff, 0xff6b6b, 0x51cf66, 0xfcc419, 0xcc5de8, 0x22b8cf};
+    for (const ImageClip& clip : clips) {
+        const int first = int(frames.size());
+        for (const auto& path : clip.files) {
+            std::string message;
+            auto loaded = loadImageFrames(path, &message);
+            if (!loaded) {
+                fail(error, path.filename().string() + ": " + message);
+                return nullptr;
+            }
+            for (ImageFrame& frame : *loaded)
+                frames.push_back(std::move(frame));
+        }
+        if (int(frames.size()) > first) {
+            Tag tag;
+            tag.name = clip.name;
+            tag.from = first;
+            tag.to = int(frames.size()) - 1;
+            tag.color = Rgba::fromHex(kTagColors[tags.size() % std::size(kTagColors)]);
+            tags.push_back(std::move(tag));
+        }
+    }
+    if (frames.empty()) {
+        fail(error, "no images");
+        return nullptr;
+    }
+    auto doc = documentFromImages(std::move(frames));
+    doc->tags = std::move(tags);
+    return doc;
+}
+
+SheetFit fitSheetSlice(int sheetWidth, int sheetHeight, const SheetSlice& s, bool partial)
+{
+    if (s.width < 1 || s.height < 1 || s.x < 0 || s.y < 0 || s.x >= sheetWidth || s.y >= sheetHeight)
+        return {};
+    // Tile k starts at k * (size + pad). It fits whole when it ends inside the sheet; it counts as a
+    // partial tile when it merely starts inside.
+    const auto count = [&](int room, int size, int pad) {
+        if (partial)
+            return (room + size + pad - 1) / (size + pad);
+        return room >= size ? (room - size) / (size + pad) + 1 : 0;
+    };
+    return {count(sheetWidth - s.x, s.width, s.padX), count(sheetHeight - s.y, s.height, s.padY)};
+}
+
+std::vector<Rect> sheetSliceCells(const SheetSlice& s)
+{
+    std::vector<Rect> out;
+    if (s.columns < 1 || s.rows < 1 || s.width < 1 || s.height < 1)
+        return out;
+    out.reserve(size_t(s.columns) * size_t(s.rows));
+    const auto cell = [&](int col, int row) {
+        return Rect{s.x + col * (s.width + s.padX), s.y + row * (s.height + s.padY), s.width, s.height};
+    };
+    if (s.order == SheetOrder::Rows) {
+        for (int row = 0; row < s.rows; ++row)
+            for (int col = 0; col < s.columns; ++col)
+                out.push_back(cell(col, row));
+    } else {
+        for (int col = 0; col < s.columns; ++col)
+            for (int row = 0; row < s.rows; ++row)
+                out.push_back(cell(col, row));
+    }
+    return out;
+}
+
+std::vector<Image> sliceSheet(const Image& sheet, const SheetSlice& slice)
+{
+    std::vector<Image> out;
+    for (const Rect& cell : sheetSliceCells(slice)) {
+        Image tile(cell.w, cell.h);
+        tile.clear(0);
+        // blit clips: what lies outside the sheet stays transparent.
+        const Rect src = Rect{cell.x, cell.y, cell.w, cell.h};
+        const Image part = sheet.copy(src);
+        if (!part.isNull())
+            tile.blit(part, {std::max(0, -cell.x), std::max(0, -cell.y)});
+        out.push_back(std::move(tile));
+    }
+    return out;
+}
+
+namespace {
+
+// Compares two names with their digit runs as numbers ("a2" before "a10").
+bool naturalLess(const std::string& a, const std::string& b)
+{
+    size_t i = 0, j = 0;
+    while (i < a.size() && j < b.size()) {
+        if (std::isdigit(static_cast<unsigned char>(a[i])) && std::isdigit(static_cast<unsigned char>(b[j]))) {
+            size_t ie = i, je = j;
+            while (ie < a.size() && std::isdigit(static_cast<unsigned char>(a[ie])))
+                ++ie;
+            while (je < b.size() && std::isdigit(static_cast<unsigned char>(b[je])))
+                ++je;
+            auto strip = [](const std::string& s, size_t from, size_t to) {
+                while (from + 1 < to && s[from] == '0')
+                    ++from;
+                return s.substr(from, to - from);
+            };
+            const std::string p = strip(a, i, ie), q = strip(b, j, je);
+            if (p.size() != q.size())
+                return p.size() < q.size();
+            if (p != q)
+                return p < q;
+            i = ie;
+            j = je;
+        } else {
+            const int ca = std::tolower(static_cast<unsigned char>(a[i])), cb = std::tolower(static_cast<unsigned char>(b[j]));
+            if (ca != cb)
+                return ca < cb;
+            ++i;
+            ++j;
+        }
+    }
+    return a.size() - i < b.size() - j;
+}
+
+std::string trimSeparators(std::string s)
+{
+    const auto sep = [](char c) { return c == '-' || c == '_' || c == ' ' || c == '.'; };
+    while (!s.empty() && sep(s.back()))
+        s.pop_back();
+    size_t i = 0;
+    while (i < s.size() && sep(s[i]))
+        ++i;
+    return s.substr(i);
+}
+
+} // namespace
+
+std::vector<ImageClip> findImageClips(const std::filesystem::path& folder)
+{
+    struct Entry {
+        std::filesystem::path path;
+        std::string number; // digits at the end of the stem, may be empty
+    };
+    struct Group {
+        std::filesystem::path dir;
+        std::string prefix;
+        std::vector<Entry> entries;
+    };
+    std::vector<Group> groups;
+    std::error_code ec;
+    for (std::filesystem::recursive_directory_iterator it(folder, std::filesystem::directory_options::skip_permission_denied, ec), end;
+         !ec && it != end; it.increment(ec)) {
+        const auto& entry = *it;
+        if (!entry.is_regular_file(ec) || !isImageExtension(entry.path().extension().string()))
+            continue;
+        const std::string stem = entry.path().stem().string();
+        if (!stem.empty() && stem[0] == '.')
+            continue; // hidden files (macOS "._name.png" resource forks)
+        auto [prefix, digits] = splitNumber(stem);
+        // A file with no number is its own clip: give it its whole name so that "idle.png" and
+        // "jump.png" don't meet.
+        if (digits.empty())
+            prefix = stem;
+        auto found = std::find_if(groups.begin(), groups.end(), [&](const Group& g) {
+            return g.dir == entry.path().parent_path() && g.prefix == prefix;
+        });
+        if (found == groups.end()) {
+            groups.push_back({entry.path().parent_path(), prefix, {}});
+            found = groups.end() - 1;
+        }
+        found->entries.push_back({entry.path(), digits});
+    }
+
+    const auto stripZeros = [](const std::string& s) { return s.substr(std::min(s.find_first_not_of('0'), s.size())); };
+    std::vector<ImageClip> clips;
+    for (Group& g : groups) {
+        // One file for each number (png before jpg ... by name when several types share one).
+        std::sort(g.entries.begin(), g.entries.end(), [&](const Entry& a, const Entry& b) {
+            const std::string x = stripZeros(a.number), y = stripZeros(b.number);
+            if (x.size() != y.size())
+                return x.size() < y.size();
+            return x != y ? x < y : a.path < b.path;
+        });
+        ImageClip clip;
+        for (size_t i = 0; i < g.entries.size(); ++i) {
+            if (i > 0 && !g.entries[i].number.empty()
+                && stripZeros(g.entries[i].number) == stripZeros(g.entries[i - 1].number))
+                continue;
+            clip.files.push_back(g.entries[i].path);
+        }
+        std::string name = trimSeparators(g.prefix);
+        if (name.empty()) {
+            name = g.dir.filename().string();
+            if (name.empty())
+                name = folder.filename().string();
+            if (name.empty())
+                name = "Animation";
+        }
+        clip.name = name;
+        clips.push_back(std::move(clip));
+    }
+    std::sort(clips.begin(), clips.end(), [](const ImageClip& a, const ImageClip& b) {
+        if (a.name != b.name)
+            return naturalLess(a.name, b.name);
+        // Same name: the one nearer the top keeps it when names are made unique below.
+        const auto depth = [](const ImageClip& c) { return std::distance(c.files.front().begin(), c.files.front().end()); };
+        return depth(a) != depth(b) ? depth(a) < depth(b) : a.files.front() < b.files.front();
+    });
+    // Unique names: the same name in two folders gets the folder's name in front, then a number.
+    for (size_t i = 0; i < clips.size(); ++i) {
+        for (size_t j = 0; j < i; ++j) {
+            if (clips[i].name != clips[j].name)
+                continue;
+            const std::string parent = clips[i].files.front().parent_path().filename().string();
+            std::string candidate = parent.empty() ? clips[i].name : parent + "_" + clips[i].name;
+            const auto taken = [&](const std::string& n) {
+                return std::any_of(clips.begin(), clips.begin() + std::ptrdiff_t(i),
+                                   [&](const ImageClip& c) { return c.name == n; });
+            };
+            for (int n = 2; taken(candidate); ++n)
+                candidate = clips[i].name + "_" + std::to_string(n);
+            clips[i].name = candidate;
+            break;
+        }
+    }
+    return clips;
 }
 
 } // namespace formats

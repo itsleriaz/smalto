@@ -151,6 +151,8 @@ QtObject {
                 ...(recent.length > 0 ? [{ text: qsTr("Open Recent"), submenu: [...recent, sep, { text: qsTr("Clear Recent Files"), action: "clearRecent", danger: true }] }] : []),
                 { text: qsTr("Import Image as Layer\u2026"), action: "import" },
                 { text: qsTr("Import Tileset Image\u2026"), action: "importTileset" },
+                { text: qsTr("Import Sprite Sheet\u2026"), action: "importSpriteSheet" },
+                { text: qsTr("Import Folder as Animation\u2026"), action: "importFolder" },
                 sep,
                 { text: qsTr("Save"), action: "save", key: "save" },
                 { text: qsTr("Save As\u2026"), action: "saveAs", key: "saveAs" },

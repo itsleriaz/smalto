@@ -44,7 +44,7 @@ Popup {
     // Remembered between runs by Main.qml (with the size and frames).
     property alias modeIndex: modeChoice.currentIndex
     property alias backgroundIndex: backgroundChoice.currentIndex
-    readonly property bool valid: spriteWidth >= 1 && spriteWidth <= 4096 && spriteHeight >= 1 && spriteHeight <= 4096
+    readonly property bool valid: spriteWidth >= 1 && spriteWidth <= editor.maxImageSize && spriteHeight >= 1 && spriteHeight <= editor.maxImageSize
 
     // With an image on the clipboard the dialog starts at its size, as Aseprite does; the
     // remembered size comes back when the dialog is closed without creating anything.
@@ -114,7 +114,7 @@ Popup {
         horizontalAlignment: Text.AlignHCenter
         font.features: { "tnum": 1 }
         selectAllOnFocus: true
-        validator: IntValidator { bottom: 1; top: 4096 }
+        validator: IntValidator { bottom: 1; top: root.editor.maxImageSize }
         onTextEdited: if (acceptableInput) edited(parseInt(text))
         onAccepted: root.create()
     }

@@ -219,8 +219,8 @@ TEST_CASE("images: a GIF opens with every frame and its delay")
 
 TEST_CASE("images: GIFs too large or broken fail cleanly")
 {
-    // A logical screen of 5000 x 10 is refused before any frame is decoded.
-    std::vector<uint8_t> big{'G', 'I', 'F', '8', '9', 'a', 0x88, 0x13, 10, 0, 0, 0, 0, ';'};
+    // A logical screen of 9000 x 10 is refused before any frame is decoded.
+    std::vector<uint8_t> big{'G', 'I', 'F', '8', '9', 'a', 0x28, 0x23, 10, 0, 0, 0, 0, ';'};
     std::string error;
     CHECK_FALSE(formats::decodeImageFrames(big, &error));
     CHECK(error.find("larger") != std::string::npos);
@@ -317,4 +317,195 @@ TEST_CASE("jpeg: the EXIF orientation is read, and the picture is turned upright
     check(6, 2, 3, [](int x, int y) { return std::pair{1 - y, x}; });
     check(7, 2, 3, [](int x, int y) { return std::pair{1 - y, 2 - x}; });
     check(8, 2, 3, [](int x, int y) { return std::pair{y, 2 - x}; });
+}
+
+// --- Sprite sheets ---------------------------------------------------------------------------------
+
+TEST_CASE("sheet slice: fit counts whole and partial tiles")
+{
+    formats::SheetSlice s;
+    s.width = 16;
+    s.height = 16;
+    auto fit = formats::fitSheetSlice(40, 33, s, false);
+    CHECK(fit.columns == 2);
+    CHECK(fit.rows == 2);
+    fit = formats::fitSheetSlice(40, 33, s, true);
+    CHECK(fit.columns == 3);
+    CHECK(fit.rows == 3);
+
+    s.x = 8; // 32 pixels left: exactly two
+    fit = formats::fitSheetSlice(40, 33, s, false);
+    CHECK(fit.columns == 2);
+    CHECK(formats::fitSheetSlice(40, 33, s, true).columns == 2);
+
+    s.x = 0;
+    s.padX = 2; // 16 + 2 + 16 = 34 <= 40; a third would start at 36
+    CHECK(formats::fitSheetSlice(40, 33, s, false).columns == 2);
+    CHECK(formats::fitSheetSlice(40, 33, s, true).columns == 3);
+
+    s.x = 40; // outside the sheet
+    CHECK(formats::fitSheetSlice(40, 33, s, true).columns == 0);
+    s.x = 0;
+    s.width = 50; // wider than the sheet
+    CHECK(formats::fitSheetSlice(40, 33, s, false).columns == 0);
+    CHECK(formats::fitSheetSlice(40, 33, s, true).columns == 1);
+}
+
+TEST_CASE("sheet slice: cells follow the order and the padding")
+{
+    formats::SheetSlice s;
+    s.x = 1;
+    s.y = 2;
+    s.width = 4;
+    s.height = 3;
+    s.padX = 1;
+    s.padY = 2;
+    s.columns = 2;
+    s.rows = 2;
+    auto cells = formats::sheetSliceCells(s);
+    REQUIRE(cells.size() == 4);
+    CHECK(cells[0].x == 1);
+    CHECK(cells[0].y == 2);
+    CHECK(cells[1].x == 6); // 1 + 4 + 1
+    CHECK(cells[1].y == 2);
+    CHECK(cells[2].x == 1);
+    CHECK(cells[2].y == 7); // 2 + 3 + 2
+
+    s.order = formats::SheetOrder::Columns;
+    cells = formats::sheetSliceCells(s);
+    REQUIRE(cells.size() == 4);
+    CHECK(cells[1].x == 1); // down first
+    CHECK(cells[1].y == 7);
+    CHECK(cells[2].x == 6);
+
+    s.columns = 0;
+    CHECK(formats::sheetSliceCells(s).empty());
+}
+
+TEST_CASE("sheet slice: tiles carry the sheet's pixels, cut-off ones are transparent")
+{
+    Image sheet(5, 3);
+    for (int y = 0; y < 3; ++y)
+        for (int x = 0; x < 5; ++x)
+            sheet.setPixel(x, y, pack({uint8_t(x * 10), uint8_t(y * 10), 7, 255}));
+    formats::SheetSlice s;
+    s.width = 2;
+    s.height = 2;
+    s.columns = 3; // the third reaches past the edge, as does the second row
+    s.rows = 2;
+    const auto tiles = formats::sliceSheet(sheet, s);
+    REQUIRE(tiles.size() == 6);
+    for (const Image& t : tiles) {
+        CHECK(t.width() == 2);
+        CHECK(t.height() == 2);
+    }
+    CHECK(tiles[1].pixel(1, 1) == sheet.pixel(3, 1));
+    CHECK(tiles[2].pixel(0, 0) == sheet.pixel(4, 0));
+    CHECK((tiles[2].pixel(1, 0) >> 24) == 0); // x = 5 is off the sheet
+    CHECK(tiles[3].pixel(0, 0) == sheet.pixel(0, 2));
+    CHECK((tiles[3].pixel(0, 1) >> 24) == 0); // y = 3 is off the sheet
+}
+
+// --- Folders of animations ------------------------------------------------------------------------------
+
+namespace {
+
+std::filesystem::path scratchFolder(const char* name)
+{
+    const auto dir = std::filesystem::temp_directory_path() / name;
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    return dir;
+}
+
+void writeSolidPng(const std::filesystem::path& path, int w, int h, uint8_t shade)
+{
+    std::filesystem::create_directories(path.parent_path());
+    Image image(w, h);
+    image.clear(pack({shade, shade, shade, 255}));
+    const auto bytes = formats::encodePng(image);
+    std::ofstream(path, std::ios::binary).write(reinterpret_cast<const char*>(bytes.data()), std::streamsize(bytes.size()));
+}
+
+} // namespace
+
+TEST_CASE("folder clips: numbered files group by name, others are clips of one")
+{
+    const auto dir = scratchFolder("smalto_clips_a");
+    for (int i : {1, 2, 10})
+        writeSolidPng(dir / ("walk_" + std::to_string(i) + ".png"), 4, 4, uint8_t(i));
+    writeSolidPng(dir / "idle01.png", 4, 4, 1);
+    writeSolidPng(dir / "idle02.png", 4, 4, 2);
+    writeSolidPng(dir / "jump.png", 4, 4, 3);
+    std::ofstream(dir / "notes.txt") << "not an image";
+
+    const auto clips = formats::findImageClips(dir);
+    REQUIRE(clips.size() == 3);
+    CHECK(clips[0].name == "idle");
+    CHECK(clips[0].files.size() == 2);
+    CHECK(clips[1].name == "jump");
+    CHECK(clips[1].files.size() == 1);
+    CHECK(clips[2].name == "walk");
+    REQUIRE(clips[2].files.size() == 3);
+    CHECK(clips[2].files[0].filename() == "walk_1.png"); // numeric order: 1, 2, 10
+    CHECK(clips[2].files[2].filename() == "walk_10.png");
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("folder clips: subfolders name unnamed sequences, clashing names stay unique")
+{
+    const auto dir = scratchFolder("smalto_clips_b");
+    writeSolidPng(dir / "run" / "1.png", 4, 4, 1);
+    writeSolidPng(dir / "run" / "2.png", 4, 4, 2);
+    writeSolidPng(dir / "hero" / "idle1.png", 4, 4, 1);
+    writeSolidPng(dir / "idle1.png", 4, 4, 1);
+    writeSolidPng(dir / "idle2.png", 4, 4, 2);
+
+    const auto clips = formats::findImageClips(dir);
+    REQUIRE(clips.size() == 3);
+    std::vector<std::string> names;
+    for (const auto& c : clips)
+        names.push_back(c.name);
+    CHECK(std::count(names.begin(), names.end(), "run") == 1);
+    CHECK(std::count(names.begin(), names.end(), "idle") == 1);
+    CHECK(std::count(names.begin(), names.end(), "hero_idle") == 1);
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("folder clips: one document, a tag for each clip")
+{
+    const auto dir = scratchFolder("smalto_clips_c");
+    writeSolidPng(dir / "a1.png", 4, 4, 10);
+    writeSolidPng(dir / "a2.png", 6, 3, 20);
+    writeSolidPng(dir / "a3.png", 4, 4, 30);
+    writeSolidPng(dir / "b.png", 4, 4, 40);
+
+    std::string error;
+    auto doc = formats::loadClipsDocument(formats::findImageClips(dir), &error);
+    REQUIRE(doc);
+    CHECK(doc->frameCount() == 4);
+    CHECK(doc->width() == 6); // fits the largest
+    CHECK(doc->height() == 4);
+    REQUIRE(doc->tags.size() == 2);
+    CHECK(doc->tags[0].name == "a");
+    CHECK(doc->tags[0].from == 0);
+    CHECK(doc->tags[0].to == 2);
+    CHECK(doc->tags[1].name == "b");
+    CHECK(doc->tags[1].from == 3);
+    CHECK(doc->tags[1].to == 3);
+    CHECK(doc->tags[0].color.a == 255); // visible, and not all one color
+    CHECK(doc->tags[0].color != doc->tags[1].color);
+
+    CHECK(!formats::loadClipsDocument({}, &error));
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("images: pictures wider than 4096 load, up to the limit")
+{
+    std::string error;
+    const auto wide = formats::decodeImage(formats::encodePng(Image(6000, 2)), &error);
+    REQUIRE(wide);
+    CHECK(wide->width() == 6000);
+    CHECK_FALSE(formats::decodeImage(formats::encodePng(Image(formats::kMaxImageSize + 1, 2)), &error));
+    CHECK(error.find("larger") != std::string::npos);
 }

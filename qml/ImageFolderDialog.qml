@@ -14,9 +14,34 @@ Popup {
     required property Editor editor
 
     property string folder: ""
-    property var clips: [] // [{name, count, files, use}]
-    readonly property int chosenClips: clips.filter(c => c.use).length
-    readonly property int chosenFrames: clips.reduce((n, c) => n + (c.use ? c.count : 0), 0)
+    property var clips: [] // [{name, count, files}], as found
+    // What the list shows and the user edits: {name, count, use}, in the order of `clips`. A
+    // ListModel, so a change to one row leaves the list where it is scrolled.
+    ListModel { id: clipModel }
+    property int revision: 0 // bumped on every edit, for the totals below
+    readonly property int chosenClips: { void revision; return countWhere(r => r.use) }
+    readonly property int chosenFrames: {
+        void revision
+        let n = 0
+        for (let i = 0; i < clipModel.count; ++i)
+            if (clipModel.get(i).use)
+                n += clipModel.get(i).count
+        return n
+    }
+    readonly property int singleFrameClips: { void revision; return countWhere(r => r.count === 1) }
+
+    function countWhere(test): int {
+        let n = 0
+        for (let i = 0; i < clipModel.count; ++i)
+            if (test(clipModel.get(i)))
+                ++n
+        return n
+    }
+    function setUse(test) { // sets `use` of every row to what `test(row)` says
+        for (let i = 0; i < clipModel.count; ++i)
+            clipModel.setProperty(i, "use", test(clipModel.get(i)))
+        ++revision
+    }
 
     // Scans `path`; false (and a message) when there is nothing to import.
     function start(path) {
@@ -26,20 +51,27 @@ Popup {
             editor.errorOccurred(qsTr("There are no images in %1.").arg(path.replace(/^.*[\\/]/, "")))
             return false
         }
-        clips = found.map(c => ({ name: c.name, count: c.count, files: c.files, use: true }))
+        clips = found
+        clipModel.clear()
+        for (const c of found)
+            clipModel.append({ name: c.name, count: c.count, use: true })
+        ++revision
         open()
         return true
     }
 
     function setClip(i, key, value) {
-        const next = clips.slice()
-        next[i] = Object.assign({}, next[i], { [key]: value })
-        clips = next
+        clipModel.setProperty(i, key, value)
+        ++revision
     }
 
     function apply() {
-        const chosen = clips.filter(c => c.use && c.name.trim() !== "")
-                            .map(c => ({ name: c.name.trim(), files: c.files }))
+        const chosen = []
+        for (let i = 0; i < clipModel.count; ++i) {
+            const row = clipModel.get(i)
+            if (row.use && row.name.trim() !== "")
+                chosen.push({ name: row.name.trim(), files: clips[i].files })
+        }
         if (chosen.length > 0 && editor.openImageClips(chosen, folder))
             close()
     }
@@ -74,31 +106,53 @@ Popup {
                       .arg(root.folder.replace(/^.*[\\/]/, ""))
         }
 
+        RowLayout {
+            Layout.preferredWidth: 380
+            spacing: 8
+            AppButton {
+                text: qsTr("Select all")
+                enabled: root.chosenClips < clipModel.count
+                onClicked: root.setUse(r => true)
+            }
+            AppButton {
+                text: qsTr("Deselect all")
+                enabled: root.chosenClips > 0
+                onClicked: root.setUse(r => false)
+            }
+            AppButton {
+                text: qsTr("Deselect 1-frame")
+                enabled: root.singleFrameClips > 0
+                onClicked: root.setUse(r => r.use && r.count !== 1)
+            }
+        }
+
         ListView {
             id: list
             Layout.preferredWidth: 380
             Layout.preferredHeight: Math.min(contentHeight, 280)
             clip: true
             spacing: 6
-            model: root.clips
+            model: clipModel
             ScrollBar.vertical: AppScrollBar {}
 
             delegate: RowLayout {
                 id: row
-                required property var modelData
+                required property string name
+                required property int count
+                required property bool use
                 required property int index
                 width: ListView.view.width - 12
                 spacing: 8
 
                 OptionPill {
                     text: ""
-                    checked: row.modelData.use
-                    onToggled: root.setClip(row.index, "use", !row.modelData.use)
+                    checked: row.use
+                    onToggled: root.setClip(row.index, "use", !row.use)
                 }
                 AppTextField {
                     Layout.fillWidth: true
-                    enabled: row.modelData.use
-                    text: row.modelData.name
+                    enabled: row.use
+                    text: row.name
                     onEditingFinished: root.setClip(row.index, "name", text)
                     onAccepted: root.apply()
                 }
@@ -107,7 +161,7 @@ Popup {
                     horizontalAlignment: Text.AlignRight
                     color: Theme.textDim
                     font.pixelSize: Theme.fontSizeSmall
-                    text: row.modelData.count === 1 ? qsTr("1 frame") : qsTr("%1 frames").arg(row.modelData.count)
+                    text: row.count === 1 ? qsTr("1 frame") : qsTr("%1 frames").arg(row.count)
                 }
             }
         }

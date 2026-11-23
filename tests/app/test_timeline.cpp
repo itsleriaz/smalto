@@ -336,6 +336,26 @@ TEST_CASE("timeline: tags are added, edited and removed with undo")
     CHECK(t.editor.tags().first().toMap().value("to") == 1);
 }
 
+TEST_CASE("timeline: Delete Tag and Frames removes the tag's frames, undoable")
+{
+    Frames t(5);
+    t.editor.selectFrames(1, 2);
+    t.editor.addTag();
+    t.editor.removeTagAndFrames(0);
+    CHECK(t.editor.tags().isEmpty());
+    CHECK(t.editor.frameCount() == 3);
+    CHECK(t.markers() == std::vector{0, 3, 4});
+    t.editor.undo();
+    CHECK(t.editor.frameCount() == 5);
+    CHECK(t.editor.tags().size() == 1);
+
+    // A tag over every frame can't take them all: one frame must stay.
+    t.editor.selectFrames(0, 4);
+    t.editor.addTag();
+    t.editor.removeTagAndFrames(1);
+    CHECK(t.editor.frameCount() == 5);
+}
+
 TEST_CASE("onion skin: shows neighbours, follows edits, hides while playing")
 {
     Frames t(3); // frame f has a marker pixel at (f, 0)

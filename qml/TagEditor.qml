@@ -16,6 +16,8 @@ Popup {
 
     property color color
     property int repeat: 0
+    property int fromFrame: 0
+    property int toFrame: 0
 
     readonly property var colors: ["#6e8bff", "#ff6b6b", "#51cf66", "#fcc419", "#cc5de8", "#22b8cf", "#ff922b", "#adb5bd"]
 
@@ -27,6 +29,8 @@ Popup {
         color = tag.color
         directionChoice.currentIndex = tag.direction
         repeat = tag.repeat
+        fromFrame = tag.from
+        toFrame = tag.to
         open()
         nameField.forceActiveFocus()
         nameField.selectAll()
@@ -38,7 +42,9 @@ Popup {
                 name: nameField.text.trim() || tag.name,
                 color: color,
                 direction: directionChoice.currentIndex,
-                repeat: repeat
+                repeat: repeat,
+                from: fromFrame,
+                to: toFrame
             })
         close()
     }
@@ -108,6 +114,30 @@ Popup {
                 model: ["Forward", "Reverse", "Ping-pong", "Ping-pong rev."]
             }
 
+            Label { text: "Frames" }
+            RowLayout {
+                spacing: 8
+                NumberControl {
+                    buttons: true
+                    value: root.fromFrame + 1
+                    from: 1
+                    to: root.toFrame + 1
+                    fieldWidth: 44
+                    tip: "First frame"
+                    onMoved: v => root.fromFrame = v - 1
+                }
+                Text { text: "to"; color: Theme.textDim; font.pixelSize: Theme.fontSize }
+                NumberControl {
+                    buttons: true
+                    value: root.toFrame + 1
+                    from: root.fromFrame + 1
+                    to: root.editor.frameCount
+                    fieldWidth: 44
+                    tip: "Last frame"
+                    onMoved: v => root.toFrame = v - 1
+                }
+            }
+
             Label { text: "Repeat" }
             NumberControl {
                 buttons: true
@@ -131,6 +161,16 @@ Popup {
                 danger: true
                 onClicked: {
                     root.editor.removeTag(root.tagIndex)
+                    root.close()
+                }
+            }
+            AppButton {
+                text: "Delete tag and frames"
+                danger: true
+                enabled: root.tag !== null && root.tag.to - root.tag.from + 1 < root.editor.frameCount
+                tip: "Removes the tag and every frame in it"
+                onClicked: {
+                    root.editor.removeTagAndFrames(root.tagIndex)
                     root.close()
                 }
             }

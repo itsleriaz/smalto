@@ -130,6 +130,7 @@ const std::vector<Shortcuts::Action>& Shortcuts::table()
             {"previewPanel", view, tr("Show / hide the preview"), {"F7"}},
             {"colorsPanel", view, tr("Show / hide the colors and palette"), {"F6"}},
             {"layersPanel", view, tr("Show / hide the layers list"), {"F8"}},
+            {"tagsPanel", view, tr("Show / hide the tags list"), {"F10"}},
             {"liveOverlay", view, tr("Particle controls on the canvas: shown, faded, hidden"), {"F9"}},
 
             {"newFrame", timeline, tr("New frame"), {"Alt+N"}},

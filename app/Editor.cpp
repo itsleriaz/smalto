@@ -7455,6 +7455,11 @@ void Editor::duplicateFrame()
 void Editor::removeFrame()
 {
     const auto [first, last] = frameSpan();
+    removeFrames(first, last);
+}
+
+void Editor::removeFrames(int first, int last)
+{
     const int count = last - first + 1;
     if (count >= m_doc->frameCount())
         return; // keep at least one frame
@@ -7835,6 +7840,15 @@ void Editor::removeTag(int index)
     std::vector<Tag> tags = m_doc->tags;
     tags.erase(tags.begin() + index);
     setTags(std::move(tags), "Delete Tag");
+}
+
+void Editor::removeTagAndFrames(int index)
+{
+    if (index < 0 || index >= int(m_doc->tags.size()))
+        return;
+    const Tag& tag = m_doc->tags[size_t(index)];
+    // Removing a tag's last frame removes the tag with it (Document::removeFrame).
+    removeFrames(tag.from, tag.to);
 }
 
 void Editor::nextFrame() { setCurrentFrame((m_currentFrame + 1) % m_doc->frameCount()); }

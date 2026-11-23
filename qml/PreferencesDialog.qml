@@ -22,6 +22,7 @@ Popup {
     property bool showPreview: true
     property bool showTools: true
     property bool showLayers: false // the classic layers list
+    property bool showTags: false // the tags list
     property int panelStyle: 0 // 0 floating cards, 1 docked to the window edges
     property int toolColumns: 1 // the tool strip starts in this many columns
     property bool timelineShown: true
@@ -42,6 +43,7 @@ Popup {
     function resetPanels() {
         showTools = true
         showLayers = false
+        showTags = false
         showColors = true
         showPreview = true
         panelStyle = 0
@@ -525,6 +527,12 @@ Popup {
                             tip: qsTr("A compact layers list, for working without the timeline")
                             checked: root.showLayers
                             onToggled: root.showLayers = !root.showLayers
+                        }
+                        OptionPill {
+                            text: qsTr("Tags list")
+                            tip: qsTr("The file's tags: edit, delete, or delete with their frames")
+                            checked: root.showTags
+                            onToggled: root.showTags = !root.showTags
                         }
                         OptionPill {
                             text: qsTr("Colors and palette")

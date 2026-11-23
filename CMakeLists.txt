@@ -51,6 +51,7 @@ if(SMALTO_BUILD_APP)
         qml/GridHandles.qml
         qml/FloatingDialog.qml
         qml/LayersPanel.qml
+        qml/TagsPanel.qml
         qml/LivePanel.qml
         qml/PickSwatch.qml
         qml/LayerMenu.qml

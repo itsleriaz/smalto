@@ -1312,6 +1312,8 @@ public:
     Q_INVOKABLE void addTag(); // over the range's frames (or the current frame)
     Q_INVOKABLE void setTag(int index, const QVariantMap& values);
     Q_INVOKABLE void removeTag(int index);
+    // Deletes the tag and every frame it covers (one undo step; refused when that would leave no frame).
+    Q_INVOKABLE void removeTagAndFrames(int index);
     Q_INVOKABLE void nextFrame();
     Q_INVOKABLE void previousFrame();
 
@@ -1992,6 +1994,7 @@ private:
     void setRange(RangeType type, core::Rect range);
     // Frames and layer indices an operation applies to (range or current).
     std::pair<int, int> frameSpan() const;
+    void removeFrames(int first, int last); // frames [first, last]; at least one frame stays
     std::pair<int, int> layerSpan() const;
     void setTags(std::vector<core::Tag> tags, const char* label);
     // Applies a new palette; `map` (old index -> new) remaps indexed pixels.

@@ -182,6 +182,7 @@ ApplicationWindow {
         property alias showTools: preferencesDialog.showTools
         property alias toolColumns: preferencesDialog.toolColumns
         property alias showLayers: preferencesDialog.showLayers
+        property alias showTags: preferencesDialog.showTags
         property alias panelStyle: preferencesDialog.panelStyle
     }
 
@@ -814,6 +815,7 @@ ApplicationWindow {
         case "canvasSize": canvasSizer.start(); break
         case "colorMode": colorModeDialog.open(); break
         case "effect": window.startEffect(arg); break
+        case "tagsPanel": preferencesDialog.showTags = !preferencesDialog.showTags; break
         case "layersPanel": preferencesDialog.showLayers = !preferencesDialog.showLayers; break
         case "colorsPanel": preferencesDialog.showColors = !preferencesDialog.showColors; break
         case "hidePanels": ui.hidden = true; break
@@ -1173,6 +1175,19 @@ ApplicationWindow {
             editor: appEditor
             onTilesetRequested: convert => tilesetDialog.openFor(convert)
         }
+        TagsPanel {
+            id: tagsPanel
+            visible: preferencesDialog.showTags && columns.isActive("tags")
+            x: columns.xOf("tags")
+            y: columns.yOf("tags")
+            width: columns.widthOf("tags")
+            docked: ui.docked
+            dockEdge: ui.docked && !columns.firstOf("tags") ? Qt.TopEdge : 0
+            height: columns.heightOf("tags")
+            z: columns.dragId === "tags" ? 50 : 0
+            opacity: columns.dragId === "tags" ? 0.85 : 1
+            editor: appEditor
+        }
         ColorPanel {
             id: colorPanel
             visible: preferencesDialog.showColors && columns.isActive("colors")
@@ -1244,9 +1259,9 @@ ApplicationWindow {
         PanelColumns {
             id: columns
             anchors.fill: parent
-            panels: ({ layers: layersPanel, colors: colorPanel, preview: previewPanel, live: ui.smearNow ? smearPanel : livePanel })
+            panels: ({ layers: layersPanel, colors: colorPanel, preview: previewPanel, live: ui.smearNow ? smearPanel : livePanel, tags: tagsPanel })
             wanted: ({ layers: preferencesDialog.showLayers, colors: preferencesDialog.showColors, preview: preferencesDialog.showPreview,
-                       live: appEditor.liveLayer || ui.smearNow })
+                       live: appEditor.liveLayer || ui.smearNow, tags: preferencesDialog.showTags })
             liveName: ui.smearNow ? qsTr("Smear") : qsTr("Particles")
             layoutJson: ui.panelLayout
             gap: ui.docked ? 0 : Theme.spacing
@@ -1551,6 +1566,7 @@ ApplicationWindow {
     Shortcut { sequences: Shortcuts.keys.pixelGrid; onActivated: canvasView.showGrid = !canvasView.showGrid }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.hideUi; onActivated: ui.hidden = !ui.hidden }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.layersPanel; onActivated: preferencesDialog.showLayers = !preferencesDialog.showLayers }
+    Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.tagsPanel; onActivated: preferencesDialog.showTags = !preferencesDialog.showTags }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.colorsPanel; onActivated: preferencesDialog.showColors = !preferencesDialog.showColors }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.liveOverlay; onActivated: ui.liveOverlay = (ui.liveOverlay + 1) % 3 }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.previewPanel; onActivated: preferencesDialog.showPreview = !preferencesDialog.showPreview }

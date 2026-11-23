@@ -47,10 +47,10 @@ Item {
     property bool fill: false
     readonly property real tabHeight: 26
 
-    readonly property var ids: ["layers", "colors", "preview", "live"]
+    readonly property var ids: ["layers", "colors", "preview", "live", "tags"]
     // The "live" slot holds the current live layer's settings: a particle layer's or a Smear group's.
     property string liveName: qsTr("Particles")
-    readonly property var names: ({ layers: qsTr("Layers"), colors: qsTr("Colors"), preview: qsTr("Preview"), live: liveName })
+    readonly property var names: ({ layers: qsTr("Layers"), colors: qsTr("Colors"), preview: qsTr("Preview"), live: liveName, tags: qsTr("Tags") })
     readonly property var layout: sanitized(layoutJson)
     readonly property var arrangement: compute()
     readonly property var placement: arrangement.panels // the open panels, by id

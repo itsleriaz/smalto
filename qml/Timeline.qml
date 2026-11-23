@@ -265,6 +265,13 @@ Panel {
         AppMenuItem { text: "Edit Tag…"; onTriggered: tagEditor.openFor(tagMenu.tagIndex) }
         AppMenuSeparator {}
         AppMenuItem { text: "Delete Tag"; danger: true; onTriggered: root.editor.removeTag(tagMenu.tagIndex) }
+        AppMenuItem {
+            readonly property var tag: root.editor.tags[tagMenu.tagIndex]
+            text: "Delete Tag and Frames"
+            danger: true
+            enabled: tag !== undefined && tag.to - tag.from + 1 < root.editor.frameCount
+            onTriggered: root.editor.removeTagAndFrames(tagMenu.tagIndex)
+        }
     }
 
     TagEditor {

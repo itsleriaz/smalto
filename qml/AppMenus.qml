@@ -283,6 +283,7 @@ QtObject {
                 { text: qsTr("Tiled View"), submenu: [tile(qsTr("Off"), 0), tile(qsTr("Across X"), 1), tile(qsTr("Across Y"), 2), tile(qsTr("Both"), 3)] },
                 sep,
                 { text: qsTr("Layers List"), action: "layersPanel", key: "layersPanel" },
+                { text: qsTr("Tags List"), action: "tagsPanel", key: "tagsPanel" },
                 { text: qsTr("Colors and Palette"), action: "colorsPanel", key: "colorsPanel" },
                 { text: qsTr("Hide Panels"), action: "hidePanels", key: "hideUi" },
             ] },

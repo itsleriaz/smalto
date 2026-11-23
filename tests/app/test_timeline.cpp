@@ -461,6 +461,50 @@ TEST_CASE("playback: plays the tag under the playhead, then stops after its repe
     CHECK(std::vector(seen.begin(), seen.begin() + 6) == std::vector{0, 1, 2, 3, 4, 0});
 }
 
+TEST_CASE("playback: the canvas and the preview play in step")
+{
+    Frames t(5);
+    for (int f = 0; f < 5; ++f) {
+        t.editor.setCurrentFrame(f);
+        t.editor.setFrameDuration(5);
+    }
+    // Ping-pong over 1..3, three passes from 1: 2 3 | 2 1 | 2 3, stop.
+    t.editor.selectFrames(1, 3);
+    t.editor.addTag();
+    t.editor.setTag(0, {{"direction", 2}, {"repeat", 3}});
+    t.editor.clearRange();
+    t.editor.setCurrentFrame(1);
+
+    // The preview plays first, gets to frame 3 and turns: the canvas joins there.
+    REQUIRE(t.editor.startPreviewPlayback(1) == 1);
+    CHECK(t.editor.nextPreviewFrame() == 2);
+    CHECK(t.editor.nextPreviewFrame() == 3);
+    CHECK(t.editor.nextPreviewFrame() == 2); // on the way back
+    std::vector<int> seen;
+    QObject::connect(&t.editor, &Editor::currentFrameChanged, [&] { seen.push_back(t.editor.currentFrame()); });
+    t.editor.setPlaying(true);
+    CHECK(t.editor.currentFrame() == 2); // caught up with the preview
+    CHECK(t.editor.nextPreviewFrame() == -1); // the canvas's clock drives both now
+    // It goes on from the preview's place: back to 1, then the last pass, then stops.
+    QSignalSpy playing(&t.editor, &Editor::playingChanged);
+    REQUIRE(playing.wait(2000));
+    CHECK(seen == std::vector{2, 1, 2, 3});
+    // Finished, so the preview has nothing to go on with.
+    CHECK(t.editor.nextPreviewFrame() == -1);
+
+    // The canvas plays first: the preview starts on the canvas's frame.
+    t.editor.setCurrentFrame(4); // outside the tag: every frame, looping
+    t.editor.setPlaying(true);
+    QTRY_VERIFY_WITH_TIMEOUT(t.editor.currentFrame() == 1, 2000);
+    const int at = t.editor.startPreviewPlayback(4);
+    CHECK(at == t.editor.currentFrame());
+    // Stopped while the preview follows: the preview goes on from there.
+    t.editor.setPlaying(false);
+    const int stoppedAt = t.editor.currentFrame();
+    CHECK(t.editor.nextPreviewFrame() == (stoppedAt + 1) % 5);
+    t.editor.stopPreviewPlayback();
+}
+
 TEST_CASE("timeline: duration for the selected frames")
 {
     Frames t(4);

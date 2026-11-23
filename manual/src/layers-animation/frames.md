@@ -23,7 +23,7 @@ Along its top you'll find, from the left:
 | Reverse a range | Right-click the frame numbers → **Reverse Frames** |
 | Frame duration | The ms field sets it for the current frame, or for the selected frames. Right-click → **Frame Duration…** for a dialog. |
 
-Press <kbd>Enter</kbd> to play the animation; the **Preview** panel plays it at its own zoom.
+Press <kbd>Enter</kbd> to play the animation; the **Preview** panel plays it at its own zoom. The Preview panel's own play button plays it there without moving the canvas; when both play, they stay in step (whichever started second joins the other on its frame).
 
 ## Cels
 

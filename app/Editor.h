@@ -959,6 +959,10 @@ public:
     // but without moving the editor's frame. `start` returns `frame` (or -1 if
     // there is nothing to play); `next` the frame after the last one it gave,
     // or -1 once the last repeat has played.
+    // In step with the canvas: while both play, the preview shows the canvas's
+    // frame (`start` then returns it). Playing the canvas while the preview
+    // plays starts it from the preview's frame and place in the tag; stopping
+    // it hands that place back, so the preview goes on from there.
     Q_INVOKABLE int startPreviewPlayback(int frame);
     Q_INVOKABLE int nextPreviewFrame();
     Q_INVOKABLE void stopPreviewPlayback();
@@ -2081,6 +2085,7 @@ private:
     QElapsedTimer m_mergeTimer;
     std::optional<core::PlaybackCursor> m_playback;
     std::optional<core::PlaybackCursor> m_previewPlayback; // the preview panel's, see startPreviewPlayback
+    bool m_previewFollowing = false; // the preview plays too, showing the canvas's frames (both playing)
     int m_playingTag = -1;
     Stroke m_stroke;
 

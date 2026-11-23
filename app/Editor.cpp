@@ -4666,9 +4666,29 @@ void Editor::setPlaying(bool playing)
 {
     if (m_playing == playing)
         return;
-    m_playing = playing && m_doc && m_doc->frameCount() > 1;
+    const bool start = playing && m_doc && m_doc->frameCount() > 1;
+    // The preview panel already playing on its own: start from where it is,
+    // with its place in the tag (direction, turn, repeats), and drive it from
+    // here on (it shows this frame while both play).
+    std::optional<PlaybackCursor> joined;
+    if (start && m_previewPlayback) {
+        joined = m_previewPlayback;
+        m_previewPlayback.reset();
+        m_previewFollowing = true;
+        setCurrentFrame(joined->frame());
+    }
+    // Stopping while the preview follows: it goes on by itself from here.
+    if (!start && m_previewFollowing) {
+        m_previewFollowing = false;
+        m_previewPlayback = m_playback;
+    }
+    m_playing = start;
     clearFrameCache(); // a loop starts from what the document is now
-    if (m_playing) {
+    if (m_playing && joined) {
+        m_playingTag = tagAt(*m_doc, m_currentFrame);
+        m_playback = joined;
+        m_playTimer.start(frameDuration());
+    } else if (m_playing) {
         m_playingTag = tagAt(*m_doc, m_currentFrame);
         if (m_playingTag >= 0) {
             const Tag& tag = m_doc->tags[size_t(m_playingTag)];
@@ -4690,8 +4710,13 @@ void Editor::setPlaying(bool playing)
 int Editor::startPreviewPlayback(int frame)
 {
     m_previewPlayback.reset();
+    m_previewFollowing = false;
     if (!m_doc || m_doc->frameCount() < 2)
         return -1;
+    if (m_playing) { // the canvas is playing: the preview shows its frames
+        m_previewFollowing = true;
+        return m_currentFrame;
+    }
     frame = std::clamp(frame, 0, m_doc->frameCount() - 1);
     const int tag = tagAt(*m_doc, frame);
     if (tag >= 0) {
@@ -4718,6 +4743,7 @@ int Editor::nextPreviewFrame()
 void Editor::stopPreviewPlayback()
 {
     m_previewPlayback.reset();
+    m_previewFollowing = false;
 }
 
 int Editor::tagIndexAt(int frame) const
@@ -4731,7 +4757,8 @@ void Editor::advancePlayback()
         return;
     const auto next = m_playback->next();
     if (!next || *next >= m_doc->frameCount()) {
-        setPlaying(false); // the last repeat has played
+        m_playback.reset(); // spent: nothing for a following preview to go on with
+        setPlaying(false);  // the last repeat has played
         return;
     }
     setCurrentFrame(*next);

@@ -32,11 +32,14 @@ Panel {
     readonly property real desiredHeight: headerOnlyHeight + 6 + viewHeight
     readonly property real shownViewHeight: Math.min(viewHeight, maxHeight - headerOnlyHeight - 6)
     readonly property bool folded: shownViewHeight < minView
-    // Playing here only; the editor's frame stays put.
+    // Playing here only; the editor's frame stays put. While the canvas plays
+    // too, this shows the canvas's frame (one clock for both, see
+    // Editor::startPreviewPlayback), and goes on by itself when it stops.
     property bool playing: false
     property int frame: 0
     property int playingTag: -1 // the tag it plays (-1: every frame)
-    readonly property int shownFrame: playing ? frame : editor.currentFrame
+    readonly property bool following: playing && editor.playing
+    readonly property int shownFrame: playing && !following ? frame : editor.currentFrame
 
     function play(on) {
         if (on && editor.frameCount < 2)
@@ -44,10 +47,14 @@ Panel {
         playing = on
         if (on) {
             frame = editor.startPreviewPlayback(editor.currentFrame)
-            playingTag = editor.tagIndexAt(editor.currentFrame)
+            playingTag = editor.tagIndexAt(frame)
             refresh()
-            playTimer.interval = editor.frameDurationAt(frame)
-            playTimer.restart()
+            if (following) {
+                playTimer.stop()
+            } else {
+                playTimer.interval = editor.frameDurationAt(frame)
+                playTimer.restart()
+            }
         } else {
             playTimer.stop()
             editor.stopPreviewPlayback()
@@ -78,6 +85,8 @@ Panel {
     Timer {
         id: playTimer
         onTriggered: {
+            if (root.following)
+                return
             const next = root.editor.nextPreviewFrame() // the tag's direction and repeats
             if (next < 0) { // the last repeat has played
                 root.play(false)
@@ -94,10 +103,25 @@ Panel {
         function onCanvasChanged() { root.scheduleRefresh() }
         // Moved into another tag (or out of one) while playing: play that instead.
         function onCurrentFrameChanged() {
-            if (!root.playing)
+            if (!root.playing || root.following)
                 root.scheduleRefresh()
             else if (root.editor.tagIndexAt(root.editor.currentFrame) !== root.playingTag)
                 root.play(true)
+        }
+        // The canvas started or stopped while this plays: follow it, or go on
+        // from its frame by itself (it handed over its place in the tag).
+        function onPlayingChanged() {
+            if (!root.playing)
+                return
+            if (root.editor.playing) {
+                playTimer.stop()
+            } else {
+                root.frame = root.editor.currentFrame
+                root.playingTag = root.editor.tagIndexAt(root.frame)
+                playTimer.interval = root.editor.frameDurationAt(root.frame)
+                playTimer.restart()
+            }
+            root.scheduleRefresh()
         }
         function onFramesChanged() {
             if (root.editor.frameCount < 2)

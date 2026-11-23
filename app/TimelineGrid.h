@@ -24,6 +24,9 @@ class TimelineGrid : public QQuickPaintedItem {
     Q_PROPERTY(qreal cellWidth MEMBER m_cellWidth NOTIFY changed)
     Q_PROPERTY(qreal rowHeight MEMBER m_rowHeight NOTIFY changed)
     Q_PROPERTY(int currentRow MEMBER m_currentRow NOTIFY changed)
+    // Whether the timeline was clicked last (what Delete, Copy... act on): its
+    // selection in the accent color, else in gray.
+    Q_PROPERTY(bool rangeActive MEMBER m_rangeActive NOTIFY changed)
     // Theme colors and font size, set from Theme in QML.
     Q_PROPERTY(QColor accent MEMBER m_accent NOTIFY changed)
     Q_PROPERTY(QColor accentSoft MEMBER m_accentSoft NOTIFY changed)
@@ -52,6 +55,8 @@ private:
     void paintFrameNumbers(QPainter& p, int firstColumn, int lastColumn);
     void paintLiveRange(QPainter& p, int row, qreal y);
     void paintSmearKeys(QPainter& p, int row, qreal y);
+    QColor rangeFill() const;    // the selection's fill, accent or gray (rangeActive)
+    QColor rangeOutline() const; // a cel block's outline
     void watchEditor();
     void repaintAll();
     bool m_fullPending = true; // a whole repaint is asked for and not yet done
@@ -65,6 +70,7 @@ private:
     qreal m_cellWidth = 24;
     qreal m_rowHeight = 24;
     int m_currentRow = -1;
+    bool m_rangeActive = true;
     int m_shownFrame = -1; // the current frame as last painted
     QColor m_accent, m_accentSoft, m_hover, m_text, m_textDim, m_textFaint;
     int m_fontPixelSize = 10;

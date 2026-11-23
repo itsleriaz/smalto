@@ -753,6 +753,13 @@ ApplicationWindow {
         else if (name === "paste")
             window.timelineEdit ? appEditor.pasteTimeline() : window.pasteHere()
         else
+            window.selectAllHere()
+    }
+    // Select All: every frame when the timeline was clicked last, else every pixel.
+    function selectAllHere() {
+        if (window.timelineEdit)
+            appEditor.selectFrames(0, appEditor.frameCount - 1)
+        else
             appEditor.selectAll()
     }
     // `--show action[:arg]` (with --screenshot): opens that dialog or menu
@@ -1355,6 +1362,7 @@ ApplicationWindow {
             maximumHeight: window.height * 0.6
             editor: appEditor
             layerProps: !layersPanel.visible
+            focused: window.timelineEdit
             onInteracted: window.timelineEdit = true
             onTilesetRequested: convert => tilesetDialog.openFor(convert)
         }
@@ -1506,7 +1514,7 @@ ApplicationWindow {
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.lasso; onActivated: appEditor.tool = Editor.Lasso }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.magicWand; onActivated: appEditor.tool = Editor.MagicWand }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.move; onActivated: appEditor.tool = Editor.Move }
-    Shortcut { sequences: Shortcuts.keys.selectAll; onActivated: appEditor.selectAll() }
+    Shortcut { sequences: Shortcuts.keys.selectAll; onActivated: window.selectAllHere() }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.transform; onActivated: appEditor.startTransform() }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.brushFromSelection; onActivated: appEditor.brushFromSelection() }
     Shortcut { sequences: Shortcuts.keys.spriteSize; onActivated: spriteSizeDialog.open() }
@@ -1554,7 +1562,8 @@ ApplicationWindow {
                    : appEditor.gradientEditable ? appEditor.cancelGradient()
                    // Lifted pixels (Cmd+T, a moved selection) land on Esc; a paste is dropped.
                    : appEditor.floating ? (appEditor.floatingLifted ? appEditor.commitFloating() : appEditor.cancelFloating())
-                   : (appEditor.rangeType === Editor.CelRange && appEditor.range.height > 1) || appEditor.layerPicks > 1
+                   // The timeline clicked last: its selection goes (the canvas's stays).
+                   : (window.timelineEdit && appEditor.rangeType !== Editor.NoRange) || appEditor.layerPicks > 1
                        ? appEditor.clearRange()
                    : appEditor.deselect()
     }
@@ -1565,7 +1574,10 @@ ApplicationWindow {
         // slice tool it deletes the picked slice.
         onActivated: appEditor.polygonActive ? appEditor.removePolygonCorner()
                    : appEditor.tool === Editor.SliceTool && appEditor.currentSlice >= 0 ? appEditor.removeSlice(appEditor.currentSlice)
-                   : appEditor.deleteSelection()
+                   // What was clicked last: the timeline's frames / cels, or the canvas's
+                   // pixels (never the other one's selection).
+                   : window.timelineEdit && !appEditor.floating ? appEditor.deleteInTimeline()
+                   : appEditor.deleteOnCanvas()
     }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.swapColors; onActivated: appEditor.swapColors() }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.brushSmaller; onActivated: appEditor.brushSize -= 1 }

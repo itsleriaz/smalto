@@ -61,6 +61,20 @@ void TimelineGrid::watchEditor()
     repaintAll();
 }
 
+QColor TimelineGrid::rangeFill() const
+{
+    if (m_rangeActive)
+        return m_accentSoft;
+    QColor gray = m_textDim;
+    gray.setAlphaF(0.16f);
+    return gray;
+}
+
+QColor TimelineGrid::rangeOutline() const
+{
+    return m_rangeActive ? m_accent : m_textDim;
+}
+
 void TimelineGrid::repaintAll()
 {
     m_fullPending = true;
@@ -94,7 +108,16 @@ void TimelineGrid::paintCels(QPainter& p, int firstColumn, int lastColumn)
     const int lastRow = std::min(rows - 1, int(std::floor((m_contentY + height()) / m_rowHeight)));
     const int currentFrame = m_editor->currentFrame();
     const bool anyRange = m_editor->rangeType() != Editor::NoRange;
+    const bool celRange = m_editor->rangeType() == Editor::CelRange;
     const QRect range = m_editor->range();
+    const QColor fill = rangeFill();
+    const QColor outline = rangeOutline();
+    const auto inRange = [&](int row, int column) {
+        if (row < 0 || row >= m_model->rowCount() || column < range.x() || column >= range.x() + range.width())
+            return false;
+        const int layer = m_model->layerForRow(row);
+        return layer >= range.y() && layer < range.y() + range.height();
+    };
     const QColor groupShade(255, 255, 255, int(0.025 * 255));
     const QColor columnLine(255, 255, 255, int(0.04 * 255));
 
@@ -113,7 +136,7 @@ void TimelineGrid::paintCels(QPainter& p, int firstColumn, int lastColumn)
             const QRectF r(column * m_cellWidth - m_contentX, y, m_cellWidth, m_rowHeight);
 
             if (selected)
-                p.fillRect(r, m_accentSoft);
+                p.fillRect(r, fill);
             else if (isCurrentFrame || currentRow)
                 p.fillRect(r, m_hover);
             else if (group)
@@ -141,6 +164,20 @@ void TimelineGrid::paintCels(QPainter& p, int firstColumn, int lastColumn)
                 p.setPen(QPen(m_accent, 1));
                 p.setBrush(Qt::NoBrush);
                 p.drawRoundedRect(r.adjusted(1.5, 1.5, -1.5, -1.5), 4, 4);
+            }
+            // A block of cels (not whole frames): outlined around its edge, inside
+            // the cells so the neighbours' fill can't cover it. The edge is also
+            // where a drag moves the block (Timeline.qml).
+            if (selected && celRange) {
+                const qreal w = 2;
+                if (!inRange(row, column - 1))
+                    p.fillRect(QRectF(r.left(), r.top(), w, r.height()), outline);
+                if (!inRange(row, column + 1))
+                    p.fillRect(QRectF(r.right() - w, r.top(), w, r.height()), outline);
+                if (!inRange(row - 1, column))
+                    p.fillRect(QRectF(r.left(), r.top(), r.width(), w), outline);
+                if (!inRange(row + 1, column))
+                    p.fillRect(QRectF(r.left(), r.bottom() - w, r.width(), w), outline);
             }
         }
         paintLiveRange(p, row, y);
@@ -219,7 +256,9 @@ void TimelineGrid::paintLiveRange(QPainter& p, int row, qreal y)
 void TimelineGrid::paintFrameNumbers(QPainter& p, int firstColumn, int lastColumn)
 {
     const int currentFrame = m_editor->currentFrame();
-    const bool anyRange = m_editor->rangeType() != Editor::NoRange;
+    // Only whole frames light up here; a block of cels is outlined in the grid instead, so
+    // the two don't look alike.
+    const bool frameRange = m_editor->rangeType() == Editor::FrameRange;
     const QRect range = m_editor->range();
     const bool onion = m_editor->onionSkin();
     const int before = m_editor->onionBefore();
@@ -231,9 +270,16 @@ void TimelineGrid::paintFrameNumbers(QPainter& p, int firstColumn, int lastColum
     QFont bold = font;
     bold.setWeight(QFont::DemiBold);
 
+    // The selected frames as one bar, under the current frame's pill.
+    if (frameRange) {
+        p.setPen(Qt::NoPen);
+        p.setBrush(rangeFill());
+        p.drawRoundedRect(QRectF(range.x() * m_cellWidth - m_contentX + 1, 1, range.width() * m_cellWidth - 2, height() - 2),
+                          4, 4);
+    }
     for (int column = firstColumn; column <= lastColumn; ++column) {
         const bool current = column == currentFrame;
-        const bool selected = anyRange && column >= range.x() && column < range.x() + range.width();
+        const bool selected = frameRange && column >= range.x() && column < range.x() + range.width();
         const QRectF r(column * m_cellWidth - m_contentX, 0, m_cellWidth, height());
 
         const int d = column - currentFrame;
@@ -244,9 +290,9 @@ void TimelineGrid::paintFrameNumbers(QPainter& p, int firstColumn, int lastColum
             p.setBrush(c);
             p.drawRoundedRect(QRectF(r.left() + 3, r.bottom() - 2, r.width() - 6, 2), 1, 1);
         }
-        if (current || selected) {
+        if (current) {
             p.setPen(Qt::NoPen);
-            p.setBrush(current ? m_accent : m_accentSoft);
+            p.setBrush(m_accent);
             p.drawRoundedRect(r.adjusted(1, 1, -1, -1), 4, 4);
         }
         p.setFont(current ? bold : font);

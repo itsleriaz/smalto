@@ -575,8 +575,16 @@ public:
     // into `maxSide` pixels (nearest); null for groups, tilemaps and empty cels.
     Q_INVOKABLE QImage layerImage(int index, int maxSide) const;
     // Clears the selected pixels of the current cel (or drops a paste); with
-    // nothing selected, every pixel of the cel.
+    // nothing selected, what the timeline has selected (deleteInTimeline).
     Q_INVOKABLE void deleteSelection();
+    // Delete, by where the user clicked last. On the canvas: a paste or
+    // lifted pixels, a Smear group's key, or the selected pixels; nothing else
+    // (never the timeline's frames or cels). False if there was nothing.
+    Q_INVOKABLE bool deleteOnCanvas();
+    // In the timeline: the selected frames or layers go, a block of cels is
+    // cleared; with one cel picked (or none), the current cel is cleared (a
+    // Smear group: its key on this frame goes).
+    Q_INVOKABLE void deleteInTimeline();
     // Arrow keys: moves the selected pixels (they float until Enter or the
     // next edit) or, with `outlineOnly`, just the selection. False if there's
     // nothing to move.

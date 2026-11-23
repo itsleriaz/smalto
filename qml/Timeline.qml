@@ -37,6 +37,32 @@ Panel {
     readonly property bool frameRange: editor.rangeType === Editor.FrameRange
     readonly property bool celRange: editor.rangeType === Editor.CelRange
     readonly property rect range: editor.range
+    // Whether the timeline was clicked last (Delete, Copy... act on it): its
+    // selection shows in the accent color, else in gray.
+    property bool focused: true
+    // A drag that starts this close (px) to the range's edge moves it; inside, it selects anew.
+    readonly property int edgeBand: 5
+
+    // Whether (x, y) in the cel grid's content is on the selected range's edge (whole frames:
+    // their left and right edges).
+    function onRangeEdge(x: real, y: real): bool {
+        if (editor.rangeType === Editor.NoRange)
+            return false
+        const left = range.x * cellWidth
+        const right = (range.x + range.width) * cellWidth
+        let top = -1e9, bottom = 1e9
+        if (celRange) {
+            const r1 = timelineModel.rowForLayer(range.y)
+            const r2 = timelineModel.rowForLayer(range.y + range.height - 1)
+            top = Math.min(r1, r2) * rowHeight
+            bottom = (Math.max(r1, r2) + 1) * rowHeight
+        }
+        const out = 3
+        if (x < left - out || x > right + out || y < top - out || y > bottom + out)
+            return false
+        return x - left < edgeBand || right - x < edgeBand
+            || (celRange && (y - top < edgeBand || bottom - y < edgeBand))
+    }
 
     // The tag bar under the pointer, for the one tooltip they share.
     property MouseArea hoveredTagArea: null
@@ -785,6 +811,7 @@ Panel {
                     cellWidth: root.cellWidth
                     rowHeight: root.rowHeight
                     currentRow: root.currentRow
+                    rangeActive: root.focused
                     accent: Theme.accent
                     accentSoft: Theme.accentSoft
                     hover: Theme.hover
@@ -818,10 +845,21 @@ Panel {
                     height: header.height
                     z: 10
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    hoverEnabled: true
+                    cursorShape: overEdge || moving ? Qt.SizeAllCursor : Qt.ArrowCursor
                     property int anchorFrame: 0
                     property int pressFrame: 0
                     property bool moving: false
                     property int delta: 0
+                    property bool overEdge: false // where a press would move the frames (edge, or Cmd inside)
+                    // On the selected frames' left or right edge.
+                    function onEdge(x: real): bool {
+                        if (!root.frameRange)
+                            return false
+                        const left = root.range.x * root.cellWidth
+                        const right = (root.range.x + root.range.width) * root.cellWidth
+                        return x >= left - 3 && x <= right + 3 && (x - left < root.edgeBand || right - x < root.edgeBand)
+                    }
 
                     function frameAt(x) {
                         return Math.max(0, Math.min(root.editor.frameCount - 1, Math.floor(x / root.cellWidth)))
@@ -844,7 +882,8 @@ Panel {
                             root.editor.currentFrame = f
                             return
                         }
-                        if (inside) {
+                        // As in the cel grid: the edge or Cmd moves, a plain press inside selects anew.
+                        if (inside && (onEdge(mouse.x) || (mouse.modifiers & Qt.ControlModifier))) {
                             moving = true
                             pressFrame = f
                             delta = 0
@@ -866,7 +905,12 @@ Panel {
                         }
                     }
                     onPositionChanged: mouse => {
-                        if (!pressed || (pressedButtons & Qt.RightButton))
+                        if (!pressed) {
+                            overEdge = onEdge(mouse.x)
+                                || ((mouse.modifiers & Qt.ControlModifier) !== 0 && root.frameRange && root.frameInRange(frameAt(mouse.x)))
+                            return
+                        }
+                        if (pressedButtons & Qt.RightButton)
                             return
                         const shift = (mouse.modifiers & Qt.ShiftModifier) !== 0
                         dragTo(mouse.x, shift)
@@ -1188,6 +1232,7 @@ Panel {
                     cellWidth: root.cellWidth
                     rowHeight: root.rowHeight
                     currentRow: root.currentRow
+                    rangeActive: root.focused
                     accent: Theme.accent
                     accentSoft: Theme.accentSoft
                     hover: Theme.hover
@@ -1237,7 +1282,8 @@ Panel {
                     property bool overGrip: false
                     hoverEnabled: true
                     cursorShape: overGrip || rangeMode !== "" ? Qt.SizeHorCursor
-                               : overKey || keyFrom >= 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                               : overKey || keyFrom >= 0 ? Qt.PointingHandCursor
+                               : overEdge || moving ? Qt.SizeAllCursor : Qt.ArrowCursor
                     // A Smear group's key: the frame of the diamond under (x, y), or -1. Dragging one moves
                     // it (Alt copies it) to `keyTo`.
                     function keyAt(x: real, y: real): int {
@@ -1246,6 +1292,7 @@ Panel {
                         return keys.indexOf(f) >= 0 && Math.abs(x - (f + 0.5) * root.cellWidth) < 9 ? f : -1
                     }
                     property bool overKey: false
+                    property bool overEdge: false // where a press would move the range (edge, or Cmd inside)
                     property int keyFrom: -1
                     property int keyTo: -1
 
@@ -1318,7 +1365,9 @@ Panel {
                             }
                             bodyPending = true
                         }
-                        if (inside) {
+                        // Moving takes the range's edge, or Cmd (Ctrl) anywhere inside it; a plain press
+                        // inside starts a new selection, so selecting from a picked cel can't move it.
+                        if (inside && (root.onRangeEdge(mouse.x, mouse.y) || (mouse.modifiers & Qt.ControlModifier))) {
                             moving = true
                             pressRow = row
                             pressFrame = f
@@ -1360,6 +1409,9 @@ Panel {
                         if (!pressed) {
                             overGrip = gripAt(mouse.x, mouse.y) !== ""
                             overKey = keyAt(mouse.x, mouse.y) >= 0
+                            overEdge = root.onRangeEdge(mouse.x, mouse.y)
+                                || ((mouse.modifiers & Qt.ControlModifier) !== 0
+                                    && root.celInRange(timelineModel.layerForRow(rowAt(mouse.y)), frameAt(mouse.x)))
                             return
                         }
                         if (pressedButtons & Qt.RightButton)

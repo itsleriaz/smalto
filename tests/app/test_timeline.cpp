@@ -292,6 +292,45 @@ TEST_CASE("timeline: Delete acts on what is selected: cels clear, frames and lay
     CHECK(int(t.editor.layers().size()) == layers);
 }
 
+TEST_CASE("timeline: Delete on the canvas never takes the timeline's selection, and back")
+{
+    Frames t(3);
+    // Frames picked in the timeline, then the canvas clicked: Delete there leaves them.
+    t.editor.selectFrames(0, 1);
+    CHECK_FALSE(t.editor.deleteOnCanvas());
+    CHECK(t.editor.frameCount() == 3);
+    t.editor.deleteInTimeline();
+    CHECK(t.editor.frameCount() == 1);
+    t.editor.undo();
+
+    // Pixels selected on the canvas and cels in the timeline: each side's Delete takes only its own.
+    t.editor.setCurrentFrame(0);
+    t.editor.selectAll(); // the whole canvas
+    REQUIRE(t.editor.hasSelection());
+    t.editor.selectCels(0, 1, 0, 2);
+    t.editor.deleteInTimeline();
+    CHECK(t.layer(0).cel(1) == nullptr);
+    CHECK(t.layer(0).cel(2) == nullptr);
+    CHECK(t.marker(0) == 0); // the canvas's selection left frame 0 alone
+    t.editor.undo();
+    t.editor.setCurrentFrame(0);
+    t.editor.selectAll();
+    CHECK(t.editor.deleteOnCanvas());
+    CHECK(t.marker(0) == -1);
+    CHECK(t.editor.frameCount() == 3);
+    CHECK(t.layer(0).cel(1) != nullptr);
+    t.editor.undo();
+
+    // Nothing selected on the canvas: Delete there does nothing; in the timeline, it clears the cel.
+    t.editor.deselect();
+    t.editor.setCurrentFrame(1);
+    t.editor.selectCels(0, 1, 0, 1);
+    CHECK_FALSE(t.editor.deleteOnCanvas());
+    CHECK(t.marker(1) == 1);
+    t.editor.deleteInTimeline();
+    CHECK(t.marker(1) == -1);
+}
+
 TEST_CASE("timeline: Clear Layer empties the current layer on every frame")
 {
     Frames t(3);

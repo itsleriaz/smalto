@@ -18,7 +18,7 @@ Along its top you'll find, from the left:
 | Add a frame | <kbd>Alt</kbd> + <kbd>N</kbd> or the **+** button |
 | Duplicate | <kbd>Alt</kbd> + <kbd>D</kbd> or the copy button |
 | Select frames | Click or drag over the frame numbers; <kbd>Shift</kbd> extends |
-| Move frames | Drag a selected range of frame numbers |
+| Move frames | Drag the edge of the selected frame numbers (or <kbd>Cmd</kbd>-drag anywhere in them) |
 | Delete | The trash button (a sprite always keeps one frame) |
 | Reverse a range | Right-click the frame numbers → **Reverse Frames** |
 | Frame duration | The ms field sets it for the current frame, or for the selected frames. Right-click → **Frame Duration…** for a dialog. |
@@ -27,7 +27,9 @@ Press <kbd>Enter</kbd> to play the animation; the **Preview** panel plays it at 
 
 ## Cels
 
-Click and drag in the grid to select a block of cels; <kbd>Shift</kbd> extends it. Drag a selection to move it (hold <kbd>Alt</kbd> / <kbd>Option</kbd> to copy). Right-click for **Link Cels** (cels that share their pixels, so editing one changes all), **Unlink Cels**, **Cut**, **Copy** and **Paste**, and **Clear Cels** (in red).
+Click and drag in the grid to select a block of cels; <kbd>Shift</kbd> extends it. A block of cels is outlined; whole frames light up in the frame numbers instead, so the two are easy to tell apart. To move a selection, drag its edge (the pointer becomes a move cursor there) or <kbd>Cmd</kbd>-drag anywhere inside it; a plain drag inside starts a new selection. Hold <kbd>Alt</kbd> / <kbd>Option</kbd> when you let go to copy instead.
+
+**Delete**, **Cut**, **Copy**, **Paste**, **Select All**, **Esc** and the arrow keys act on what you clicked last: the timeline or the canvas. The timeline's selection is in the accent color while it's the one they act on, and gray once you click the canvas. With the canvas clicked last and no pixels selected, Delete does nothing. Right-click for **Link Cels** (cels that share their pixels, so editing one changes all), **Unlink Cels**, **Cut**, **Copy** and **Paste**, and **Clear Cels** (in red).
 
 ## Tags
 

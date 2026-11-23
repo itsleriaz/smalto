@@ -10587,6 +10587,12 @@ void Editor::deselect()
 
 void Editor::deleteSelection()
 {
+    if (!deleteOnCanvas())
+        deleteInTimeline();
+}
+
+bool Editor::deleteOnCanvas()
+{
     if (m_float.active) {
         if (m_float.lifted) { // the lifted pixels stay deleted
             m_float.rendered = Image();
@@ -10596,16 +10602,23 @@ void Editor::deleteSelection()
         } else {
             cancelFloating(); // a paste is dropped
         }
-        return;
+        return true;
     }
     if (m_current && m_current->isSmear()) { // a Smear group has no pixels: the frame's key goes
         removeSmearKey(m_currentFrame);
-        return;
+        return true;
     }
     if (!m_doc->selection.isEmpty()) {
         deleteArea(m_doc->selection, "Delete");
-        return;
+        return true;
     }
+    return false;
+}
+
+void Editor::deleteInTimeline()
+{
+    if (m_float.active)
+        commitFloating();
     // What the timeline has selected: frames go, layers go, a block of cels is cleared.
     if (m_rangeType == FrameRange) {
         removeFrame();
@@ -10619,7 +10632,11 @@ void Editor::deleteSelection()
         clearCels();
         return;
     }
-    // Nothing selected: the whole cel, also what lies past the canvas.
+    if (m_current && m_current->isSmear()) {
+        removeSmearKey(m_currentFrame);
+        return;
+    }
+    // One cel (or nothing) picked: the whole cel, also what lies past the canvas.
     if (!m_current || !m_current->hasCels())
         return;
     const CelRef cel = m_current->cel(m_currentFrame);

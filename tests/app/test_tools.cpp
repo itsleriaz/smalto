@@ -3525,3 +3525,41 @@ TEST_CASE("symmetry: moving a mirrored selection moves the pieces as mirror imag
     CHECK(painted(editor, 1, 1));
     CHECK(painted(editor, 14, 1));
 }
+
+TEST_CASE("tools: the size being dragged out, for the readout by the pointer")
+{
+    Fixture f;
+    QSignalSpy spy(&f.editor, &Editor::dragInfoChanged);
+    CHECK(f.editor.dragInfo().isEmpty());
+
+    f.editor.setTool(Editor::Rectangle);
+    f.editor.beginStroke({2, 2}, false);
+    f.editor.moveStroke({5, 6});
+    CHECK(f.editor.dragInfo() == QString::fromUtf8("4 × 5"));
+    f.editor.setStrokeModifiers(Qt::ShiftModifier); // a square
+    CHECK(f.editor.dragInfo() == QString::fromUtf8("5 × 5"));
+    f.editor.endStroke();
+    CHECK(f.editor.dragInfo().isEmpty());
+    CHECK(spy.count() >= 3);
+
+    f.editor.setTool(Editor::Line);
+    f.editor.beginStroke({1, 1}, false);
+    f.editor.moveStroke({9, 3});
+    CHECK(f.editor.dragInfo() == QString::fromUtf8("9 × 3"));
+    f.editor.endStroke();
+
+    // A selection: what it selects, cut to the canvas.
+    f.editor.setTool(Editor::Select);
+    f.editor.beginStroke({10, 12}, false);
+    f.editor.moveStroke({30, 30});
+    CHECK(f.editor.dragInfo() == QString::fromUtf8("6 × 4"));
+    f.editor.endStroke();
+    CHECK(f.editor.dragInfo().isEmpty());
+
+    // The pencil has no size to show.
+    f.editor.setTool(Editor::Pencil);
+    f.editor.beginStroke({1, 1}, false);
+    f.editor.moveStroke({4, 4});
+    CHECK(f.editor.dragInfo().isEmpty());
+    f.editor.endStroke();
+}

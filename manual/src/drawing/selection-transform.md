@@ -2,7 +2,7 @@
 
 ## Making a selection
 
-- **Select** (<kbd>M</kbd>): drag a rectangle. <kbd>Shift</kbd> while dragging makes it a square, <kbd>Alt</kbd> (<kbd>Option</kbd>) draws it from the center. Double-click with the grid shown to select one grid cell.
+- **Select** (<kbd>M</kbd>): drag a rectangle. <kbd>Shift</kbd> while dragging makes it a square, <kbd>Alt</kbd> (<kbd>Option</kbd>) draws it from the center; its size shows next to the pointer. Double-click with the grid shown to select one grid cell.
 - **Lasso** (<kbd>Q</kbd>): in **Freehand** mode, drag around what to select (hold <kbd>Alt</kbd> for a straight segment); the outline closes itself. In **Polygon** mode, click the corners, then click the first corner, double-click or press <kbd>Enter</kbd> to finish. <kbd>Backspace</kbd> removes the last corner, <kbd>Esc</kbd> cancels, and <kbd>Shift</kbd> on later corners snaps to 45°.
 - **Magic Wand** (<kbd>W</kbd>): click to select the pixels of that color. **Contiguous** selects the connected area, **Global** every matching pixel. **Tolerance** is how different a color may be and still count. **All layers** looks at what every visible layer shows instead of the current layer.
 

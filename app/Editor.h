@@ -94,6 +94,9 @@ class Editor : public QObject {
     // The lasso being drawn, in canvas pixels (pixel centers): a freehand
     // drag's points, or a polygon's corners plus the pointer. Empty otherwise.
     Q_PROPERTY(QList<QPointF> lassoPath READ lassoPath NOTIFY lassoPathChanged)
+    // While dragging out a shape or a rectangle selection: its size ("12 × 8"),
+    // shown by the pointer. Empty otherwise.
+    Q_PROPERTY(QString dragInfo READ dragInfo NOTIFY dragInfoChanged)
     Q_PROPERTY(bool wandContiguous READ wandContiguous WRITE setWandContiguous NOTIFY toolOptionsChanged)
     // Fill and magic wand look at every visible layer (the composite), not
     // just the current cel. Either way only the current cel gets the fill.
@@ -550,6 +553,7 @@ public:
     void setLassoPolygon(bool on);
     bool polygonActive() const { return m_polygon.active; }
     QList<QPointF> lassoPath() const;
+    QString dragInfo() const { return m_stroke.active ? m_stroke.info : QString(); }
     // Polygon lasso: the corners so far become the selection (with the mode
     // the first click picked), as one undo step; with fewer than two corners
     // it's a click (deselects without Shift / Alt). Cancel drops them;
@@ -1402,6 +1406,7 @@ signals:
     void symmetryCenterChanged();
     void polygonChanged();
     void lassoPathChanged();
+    void dragInfoChanged();
     void layersChanged();
     // Cels were added or removed (layers or frames may be unchanged).
     void celsChanged();
@@ -1502,6 +1507,7 @@ private:
         core::Point origin; // cel position in the document
         core::Point start;  // image coordinates (document for Select/Move*)
         core::Point last;
+        QString info;       // dragInfo: the size being dragged out
         core::Rect bounds;  // everything changed so far, image coordinates
         core::Rect drawn;   // what the last shape/move step changed
         bool useStamp = false; // Tiles: place the picked block, not one tile
@@ -1734,6 +1740,7 @@ private:
     core::Image brushPixels(bool custom, int size, int angle) const;
     bool useCustomBrush(const core::Image& rgba); // trims, checks the size, selects it
     void pasteFloating(std::optional<QPoint> center); // paste() / pasteAt()
+    void setDragSize(int w, int h); // the stroke's dragInfo
     bool pasteNewLayer(std::optional<QPoint> center); // pasteAsNewLayer() / ...At()
     bool customBrushInUse() const;
     // Stamps the brush at p (image coordinates of `img`, at `origin` in the

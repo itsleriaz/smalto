@@ -34,7 +34,7 @@ Both stay inside the current selection.
 | **Ellipse** | <kbd>O</kbd> | <kbd>Shift</kbd> makes a circle. The **Filled** option fills it. |
 | **Text** | <kbd>T</kbd> | See [Text](text-gradient-fill.md#text). |
 
-For all three shapes, hold <kbd>Alt</kbd> (<kbd>Option</kbd>) to draw from the center, and use the right mouse button for the secondary color.
+For all three shapes, hold <kbd>Alt</kbd> (<kbd>Option</kbd>) to draw from the center, and use the right mouse button for the secondary color. While you drag, the size (width × height in pixels) shows next to the pointer.
 
 ## Selecting and moving
 

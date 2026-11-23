@@ -283,6 +283,7 @@ void Editor::documentSwitched()
 {
     m_float = {};
     m_stroke = {};
+    emit dragInfoChanged();
     if (m_polygon.active) {
         m_polygon = {};
         emit polygonChanged();
@@ -8542,9 +8543,11 @@ void Editor::drawShape()
         const Point a0 = snapVertex(a, o);
         const Point end = constrain ? snapLine(a0, snapVertex(b, o)) : snapVertex(b, o);
         const Point begin = fromCenter ? Point{2 * a0.x - end.x, 2 * a0.y - end.y} : a0;
+        setDragSize(std::abs(end.x - begin.x) + 1, std::abs(end.y - begin.y) + 1);
         bresenham(begin, end, stamp);
     } else {
         const Rect r = snapCells(shapeRect(a, b, constrain, fromCenter), o);
+        setDragSize(r.w, r.h);
         if (m_tool == Rectangle) {
             if (m_fillShapes)
                 for (int y = r.y; y < r.bottom(); ++y)
@@ -8679,7 +8682,9 @@ void Editor::updateSelectionStroke()
         const Rect drawn = shapeRect(m_stroke.start, m_stroke.last, constrain, fromCenter);
         // On a tilemap layer in tile mode a selection is whole cells (the tileset's grid).
         const Rect cells = tilesActive() ? snapToTileCells(drawn) : snapCells(drawn);
-        shape = symmetricSelection(Mask(cells.intersected(m_doc->bounds())));
+        const Rect kept = cells.intersected(m_doc->bounds());
+        setDragSize(kept.w, kept.h);
+        shape = symmetricSelection(Mask(kept));
     }
     setSelection(combinedSelection(m_stroke.selectionStart, shape, m_stroke.selectMode));
 }
@@ -9210,10 +9215,22 @@ void Editor::endStroke()
         m_gradientLine.clear();
         emit gradientLineChanged();
     }
+    const bool hadInfo = !m_stroke.info.isEmpty();
     m_stroke = {};
     refreshOverlay();
     if (lasso)
         emit lassoPathChanged();
+    if (hadInfo)
+        emit dragInfoChanged();
+}
+
+void Editor::setDragSize(int w, int h)
+{
+    const QString info = QStringLiteral("%1 \u00d7 %2").arg(w).arg(h);
+    if (info == m_stroke.info)
+        return;
+    m_stroke.info = info;
+    emit dragInfoChanged();
 }
 
 void Editor::fill(QPoint pixel, bool secondary)

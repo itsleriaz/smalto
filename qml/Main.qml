@@ -1054,6 +1054,29 @@ ApplicationWindow {
             anchors.fill: parent
             canvas: canvasView
         }
+        // The size of the shape or selection being dragged out, by the pointer
+        // (below right of it; flipped near the canvas's right / bottom edge).
+        Rectangle {
+            id: dragSize
+            visible: appEditor.dragInfo !== ""
+            readonly property point at: canvasView.hoverPosition
+            x: at.x + 16 + width > parent.width ? at.x - 12 - width : at.x + 16
+            y: at.y + 20 + height > parent.height ? at.y - 12 - height : at.y + 20
+            z: 20
+            width: dragSizeText.implicitWidth + 12
+            height: dragSizeText.implicitHeight + 6
+            radius: 4
+            color: Theme.panelSolid
+            border.color: Theme.panelBorder
+            Text {
+                id: dragSizeText
+                anchors.centerIn: parent
+                text: appEditor.dragInfo
+                color: Theme.text
+                font.pixelSize: Theme.fontSizeSmall
+                font.features: { "tnum": 1 } // figures don't jiggle as they change
+            }
+        }
         GradientOverlay {
             anchors.fill: parent
             editor: appEditor

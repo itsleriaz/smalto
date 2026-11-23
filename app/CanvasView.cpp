@@ -304,6 +304,9 @@ void CanvasRenderer::synchronize(QQuickRhiItem* item)
         u.hoverRect[3] = float(extent.height());
         u.brushStyle[0] = brush && editor->previewsBrushColors() ? 1.f : 0.f;
         u.brushStyle[1] = 0.75f;
+        // Outlined: strongly for the tools that show no color of their own
+        // (an eraser over paint was hard to see), lightly for the rest.
+        u.brushStyle[2] = eraser ? 0.85f : 0.4f;
         if (editor->usesBrush(editor->tool()) && !eraser)
             setColor(u.hoverColor, editor->primaryColor(), 0.6f * float(editor->primaryColor().alphaF()));
         else

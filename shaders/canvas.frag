@@ -9,14 +9,14 @@ layout(std140, binding = 0) uniform buf {
     vec4 background;
     vec4 checkA;
     vec4 checkB;
-    vec4 grid;
+    vec4 grid;       // the pixel grid's color (alpha: its strength); alpha 0: automatic
     vec4 hoverColor;
     vec4 hoverRect;
     vec4 params;     // x: checker size, y: grid strength, z: ants phase, w: device pixel ratio
     vec4 selection;  // bounds: x, y, w, h in canvas pixels; w = 0: none
     vec4 symmetry;   // xy: where the axes cross (canvas pixels); z: axes shown, bits: 1 vertical, 2 horizontal, 4 rising, 8 falling diagonal
     vec4 customGrid; // x, y: offset, zw: cell size (canvas pixels); w = 0: off
-    vec4 brushStyle; // x: 1 = the brush texture shows its own colors (at opacity y)
+    vec4 brushStyle; // x: 1 = the brush texture shows its own colors (at opacity y); z: outline strength
     vec4 border;     // the line around the canvas; alpha blends it
     vec4 tiling;     // x / y: 1 = the sprite repeats across that axis; z: 1 = the checkerboard is fixed on screen, w: its cell (px)
     vec4 docGrid;    // the document grid's color; alpha 0: automatic
@@ -28,6 +28,21 @@ layout(binding = 2) uniform sampler2D overlay; // tool previews, drawn over the 
 layout(binding = 3) uniform sampler2D onion;   // onion skin, drawn behind the sprite (over it with tileDim.y)
 layout(binding = 4) uniform sampler2D selectionMask; // r > 0.5: selected
 layout(binding = 5) uniform sampler2D brushMask;     // the brush over hoverRect: footprint (alpha) or colors
+
+// Black over light colors, white over dark ones: lines that show on anything.
+vec3 contrast(vec3 c)
+{
+    return vec3(1.0 - step(0.6, dot(c, vec3(0.299, 0.587, 0.114))));
+}
+
+// Whether canvas pixel `q` is in the brush footprint shown over hoverRect.
+bool inBrush(vec2 q)
+{
+    if (q.x < hoverRect.x || q.y < hoverRect.y || q.x >= hoverRect.x + hoverRect.z || q.y >= hoverRect.y + hoverRect.w)
+        return false;
+    float a = texture(brushMask, (q - hoverRect.xy + 0.5) / hoverRect.zw).a;
+    return brushStyle.x > 0.5 ? a > 0.0 : a > 0.5;
+}
 
 // Whether canvas pixel `px` (whole numbers) is selected; outside the canvas never.
 bool selectedAt(vec2 px, vec2 size)
@@ -85,6 +100,19 @@ void main()
             col = mix(col, b.rgb, b.a * brushStyle.y);
         else if (b.a > 0.5)
             col = mix(col, hoverColor.rgb, hoverColor.a);
+        // An outline just inside the footprint's edge, one screen pixel wide
+        // (never more than half a canvas pixel), so it shows over any paint.
+        if (brushStyle.z > 0.0 && inBrush(px)) {
+            float w = min(max(1.0, params.w), 0.5 * zoom);
+            vec2 a = fract(p) * zoom;         // screen px from the pixel's left / top edge
+            vec2 c = (1.0 - fract(p)) * zoom; // and from its right / bottom edge
+            bool edge = (a.x < w && !inBrush(px + vec2(-1.0, 0.0)))
+                     || (c.x <= w && !inBrush(px + vec2(1.0, 0.0)))
+                     || (a.y < w && !inBrush(px + vec2(0.0, -1.0)))
+                     || (c.y <= w && !inBrush(px + vec2(0.0, 1.0)));
+            if (edge)
+                col = mix(col, contrast(col), brushStyle.z);
+        }
     }
 
     // Symmetry axes: thin dashed lines across the canvas.
@@ -107,7 +135,10 @@ void main()
     if (params.y > 0.0) {
         vec2 f = fract(p) * zoom; // distance in screen px from the pixel's top-left edge
         float line = (f.x < 1.0 || f.y < 1.0) ? 1.0 : 0.0;
-        col = mix(col, grid.rgb, line * grid.a * params.y);
+        if (grid.a > 0.0)
+            col = mix(col, grid.rgb, line * grid.a * params.y);
+        else
+            col = mix(col, contrast(col), line * 0.3 * params.y);
     }
 
     // The document's grid: one screen pixel line on each cell edge, white over
@@ -120,7 +151,7 @@ void main()
             if (docGrid.a > 0.0)
                 col = mix(col, docGrid.rgb, docGrid.a);
             else
-                col = mix(col, vec3(step(0.6, dot(col, vec3(0.299, 0.587, 0.114)))), 0.45);
+                col = mix(col, contrast(col), 0.6);
         }
     }
 

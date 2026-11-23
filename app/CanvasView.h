@@ -263,7 +263,7 @@ private:
     static inline const QColor kCustomCheckerB{0x3a, 0x3a, 0x40};
     static constexpr bool kCheckerFixed = false;
     static constexpr bool kDimTiledCopies = true;
-    static inline const QColor kGridColor{0, 0, 0, 71};
+    static inline const QColor kGridColor{0, 0, 0, 0}; // transparent: automatic
     static inline const QColor kDocumentGridColor{0, 0, 0, 0}; // transparent: automatic
     static constexpr bool kCheckerThemed = false;
     static constexpr bool kScrollZooms = false;

@@ -428,10 +428,22 @@ Popup {
                     Heading { text: qsTr("Grids") }
                     Fields {
                         Label { text: qsTr("Pixel grid") }
-                        ColorField {
-                            alpha: true
-                            value: root.canvas.gridColor
-                            onEdited: c => root.canvas.gridColor = c
+                        RowLayout {
+                            spacing: 8
+                            ColorField {
+                                alpha: true
+                                enabled: root.canvas.gridColor.a > 0
+                                opacity: enabled ? 1 : 0.45
+                                value: root.canvas.gridColor.a > 0 ? root.canvas.gridColor : Qt.rgba(1, 1, 1, 0.3)
+                                onEdited: c => root.canvas.gridColor = c
+                            }
+                            OptionPill {
+                                text: qsTr("Automatic")
+                                tip: qsTr("Black over light colors and white over dark ones")
+                                checked: root.canvas.gridColor.a === 0
+                                onToggled: root.canvas.gridColor = root.canvas.gridColor.a === 0
+                                           ? Qt.rgba(0, 0.9, 1, 0.5) : Qt.rgba(0, 0, 0, 0)
+                            }
                         }
                         Label { text: qsTr("Document grid") }
                         RowLayout {

@@ -24,7 +24,9 @@ Panel {
     // What the window leaves for the whole panel (set by it). The preview
     // shrinks to fit, and folds to its header when under `minView`.
     property real maxHeight: 10000
-    readonly property int minView: 60
+    // Small, so a short column still shows a thumbnail: at 60 the picture went
+    // away while the panel kept a blank strip under its title ("empty").
+    readonly property int minView: 24
     readonly property real headerOnlyHeight: 26 + padding * 2
     // What it would like, whatever room there is.
     readonly property real desiredHeight: headerOnlyHeight + 6 + viewHeight
@@ -227,6 +229,11 @@ Panel {
                     preview.pan = Qt.point(0, 0)
                 }
             }
+        }
+        // Folded: the title stays at the top of whatever height it was given.
+        Item {
+            visible: root.folded
+            Layout.fillHeight: true
         }
     }
 }

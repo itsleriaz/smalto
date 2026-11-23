@@ -147,6 +147,7 @@ if(SMALTO_BUILD_APP)
             app/ImagePreview.h app/ImagePreview.cpp
             app/Recovery.h app/Recovery.cpp
             app/ClickAway.h app/ClickAway.cpp
+            app/ScrollClick.h app/ScrollClick.cpp
             app/Migration.h app/Migration.cpp
             app/BrushLibrary.h app/BrushLibrary.cpp
             app/Shortcuts.h app/Shortcuts.cpp

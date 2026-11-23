@@ -16,6 +16,12 @@ ImagePreview::ImagePreview(QQuickItem* parent)
 
 void ImagePreview::setImage(const QImage& image)
 {
+    // A new size (trim, canvas size, another sprite): a pan kept from the old
+    // one could leave the picture out of view, so start centered again.
+    if (image.size() != m_image.size() && !m_pan.isNull()) {
+        m_pan = {};
+        emit panChanged();
+    }
     m_image = image;
     updateZoom();
     emit imageChanged();

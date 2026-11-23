@@ -9396,7 +9396,10 @@ void Editor::copyMerged()
     emit clipboardChanged();
 }
 
-bool Editor::pasteAsNewLayer()
+bool Editor::pasteAsNewLayer() { return pasteNewLayer(std::nullopt); }
+bool Editor::pasteAsNewLayerAt(QPoint center) { return pasteNewLayer(center); }
+
+bool Editor::pasteNewLayer(std::optional<QPoint> center)
 {
     endStroke();
     commitFloating();
@@ -9404,7 +9407,7 @@ bool Editor::pasteAsNewLayer()
     if (!clipboardRgba(rgba))
         return false;
     insertLayerAboveCurrent(m_doc->makeImageLayer("Pasted"));
-    paste();
+    pasteFloating(center);
     return true;
 }
 
@@ -9426,17 +9429,28 @@ bool Editor::pasteAsNewSprite()
     return true;
 }
 
-void Editor::paste()
+void Editor::paste() { pasteFloating(std::nullopt); }
+void Editor::pasteAt(QPoint center) { pasteFloating(center); }
+
+void Editor::pasteFloating(std::optional<QPoint> center)
 {
     endStroke();
     commitFloating();
     Image rgba;
     if (!canDrawOnCurrentLayer() || !clipboardRgba(rgba))
         return;
-    // Our own copy goes back where it came from; anything else is centered.
-    const QImage image = QGuiApplication::clipboard()->image().convertToFormat(QImage::Format_RGBA8888);
-    const Point at = image == m_copiedImage ? m_copiedOrigin
-                                            : Point{(m_doc->width() - rgba.width()) / 2, (m_doc->height() - rgba.height()) / 2};
+    Point at;
+    if (center) {
+        // Centered on the pointer, which is kept on the canvas so the paste is too.
+        const int cx = std::clamp(center->x(), 0, m_doc->width() - 1);
+        const int cy = std::clamp(center->y(), 0, m_doc->height() - 1);
+        at = {cx - rgba.width() / 2, cy - rgba.height() / 2};
+    } else {
+        // In place: our own copy goes back where it came from; anything else is centered.
+        const QImage image = QGuiApplication::clipboard()->image().convertToFormat(QImage::Format_RGBA8888);
+        at = image == m_copiedImage ? m_copiedOrigin
+                                    : Point{(m_doc->width() - rgba.width()) / 2, (m_doc->height() - rgba.height()) / 2};
+    }
     if (m_tool != Move && m_tool != Select)
         setTool(Move);
     startFloat(convertToDocument(*m_doc, rgba), {at.x, at.y, rgba.width(), rgba.height()}, "Paste");

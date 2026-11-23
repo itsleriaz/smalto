@@ -727,6 +727,17 @@ ApplicationWindow {
             onChosen: (action, arg) => appMenus.run(action, arg)
         }
     }
+    // Paste goes under the pointer while it's over the canvas (Paste in Place
+    // keeps the spot it was copied from), as a new layer too.
+    function pasteHere() {
+        if (canvasView.hovering)
+            appEditor.pasteAt(canvasView.hoverPixel)
+        else
+            appEditor.paste()
+    }
+    function pasteHereAsNewLayer() {
+        return canvasView.hovering ? appEditor.pasteAsNewLayerAt(canvasView.hoverPixel) : appEditor.pasteAsNewLayer()
+    }
     // Cut, Copy, Paste and Select All go to a text field that has the keys,
     // else to the timeline or the canvas (whichever was clicked last).
     function editText(name) {
@@ -740,7 +751,7 @@ ApplicationWindow {
         else if (name === "copy")
             window.timelineEdit ? appEditor.copyTimeline() : appEditor.copy()
         else if (name === "paste")
-            window.timelineEdit ? appEditor.pasteTimeline() : appEditor.paste()
+            window.timelineEdit ? appEditor.pasteTimeline() : window.pasteHere()
         else
             appEditor.selectAll()
     }
@@ -1491,10 +1502,11 @@ ApplicationWindow {
     Shortcut {
         enabled: !window.typing
         sequences: Shortcuts.keys.paste
-        onActivated: window.timelineEdit ? appEditor.pasteTimeline() : appEditor.paste()
+        onActivated: window.timelineEdit ? appEditor.pasteTimeline() : window.pasteHere()
     }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.copyMerged; onActivated: appEditor.copyMerged() }
-    Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.pasteNewLayer; onActivated: appEditor.pasteAsNewLayer() }
+    Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.pasteNewLayer; onActivated: window.pasteHereAsNewLayer() }
+    Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.pasteInPlace; onActivated: appEditor.paste() }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.pasteNewSprite; onActivated: appEditor.pasteAsNewSprite() }
     Shortcut { sequences: Shortcuts.keys.deselect; onActivated: appEditor.deselect() }
     Shortcut { enabled: !window.typing; sequences: Shortcuts.keys.outline; onActivated: window.startEffect("outline") }

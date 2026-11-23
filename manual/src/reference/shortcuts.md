@@ -52,6 +52,7 @@ These are the defaults. Rebind them in **Preferences → Shortcuts** (see [Short
 | Cut | <kbd>Ctrl</kbd> + <kbd>X</kbd> |
 | Copy | <kbd>Ctrl</kbd> + <kbd>C</kbd> |
 | Paste | <kbd>Ctrl</kbd> + <kbd>V</kbd> |
+| Paste in place | <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd> |
 | Copy merged (all visible layers) | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd> |
 | Paste as new layer | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd> |
 | Paste as new sprite | <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>V</kbd> |

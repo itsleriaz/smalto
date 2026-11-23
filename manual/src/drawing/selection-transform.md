@@ -27,6 +27,8 @@ Drag inside a selection to move its pixels, or use the **Move** tool (<kbd>V</kb
 
 <kbd>Ctrl</kbd> + <kbd>C</kbd>, <kbd>X</kbd> and <kbd>V</kbd> copy, cut and paste pixels, or frames and cels if you clicked the timeline last. **Copy Merged** (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd>) copies what all visible layers show. **Paste as New Layer** and **Paste as New Sprite** put the clipboard in a new layer or document.
 
+With the pointer over the canvas, a paste lands centered under it; from the menu, or with the pointer elsewhere, it goes back where it was copied from (an image from another app is centered). **Paste in Place** (<kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd>) always puts it back where it was copied from. **Paste as New Layer** follows the pointer the same way.
+
 A paste floats: drag it to move it, press <kbd>Enter</kbd> (or click elsewhere) to place it, <kbd>Esc</kbd> to cancel.
 
 ## Transform

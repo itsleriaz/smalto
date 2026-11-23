@@ -89,6 +89,7 @@ const std::vector<Shortcuts::Action>& Shortcuts::table()
             {"cut", edit, tr("Cut"), standard(QKeySequence::Cut)},
             {"copy", edit, tr("Copy"), standard(QKeySequence::Copy)},
             {"paste", edit, tr("Paste"), standard(QKeySequence::Paste)},
+            {"pasteInPlace", edit, tr("Paste in place"), {"Ctrl+Alt+Shift+V"}},
             {"copyMerged", edit, tr("Copy merged (all visible layers)"), {"Ctrl+Shift+C"}},
             {"pasteNewLayer", edit, tr("Paste as new layer"), {"Ctrl+Shift+V"}},
             {"pasteNewSprite", edit, tr("Paste as new sprite"), {"Ctrl+Alt+V"}},

@@ -125,6 +125,9 @@ Panel {
                     // switch, drag to reorder (it moves when let go); right:
                     // the tab menu.
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    // Keep the drag: else the title bar's window move (and the
+                    // row's flick) takes it over and the tab never moves.
+                    preventStealing: true
                     property real pressX
                     property bool dragging: false
                     property bool wasDrag: false

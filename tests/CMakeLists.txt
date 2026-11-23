@@ -59,6 +59,7 @@ if(SMALTO_BUILD_APP)
         app/test_brushes.cpp
         app/test_pen.cpp
         app/test_migration.cpp
+        app/test_scrollclick.cpp
         ${PROJECT_SOURCE_DIR}/app/Editor.h
         ${PROJECT_SOURCE_DIR}/app/Editor.cpp
         ${PROJECT_SOURCE_DIR}/app/FileOpenQueue.h
@@ -79,10 +80,12 @@ if(SMALTO_BUILD_APP)
         ${PROJECT_SOURCE_DIR}/app/TimelineModel.cpp
         ${PROJECT_SOURCE_DIR}/app/Migration.h
         ${PROJECT_SOURCE_DIR}/app/Migration.cpp
+        ${PROJECT_SOURCE_DIR}/app/ScrollClick.h
+        ${PROJECT_SOURCE_DIR}/app/ScrollClick.cpp
     )
     set_target_properties(smalto_app_tests PROPERTIES AUTOMOC ON)
     target_include_directories(smalto_app_tests PRIVATE ${doctest_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/app)
-    target_link_libraries(smalto_app_tests PRIVATE smalto_formats Qt6::Gui Qt6::Network Qt6::Qml Qt6::Test)
+    target_link_libraries(smalto_app_tests PRIVATE smalto_formats Qt6::Gui Qt6::Network Qt6::Qml Qt6::Quick Qt6::Test)
     target_compile_definitions(smalto_app_tests PRIVATE SMALTO_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus" DOCTEST_CONFIG_USE_STD_HEADERS)
     if(MSVC)
         target_compile_options(smalto_app_tests PRIVATE /utf-8)

@@ -577,6 +577,10 @@ TEST_CASE("editor: trim canvas crops to what any frame shows, undoable")
     CHECK(editor.canvasHeight() == 2); // y 3..4
     editor.setCurrentFrame(0);
     CHECK(pixel(editor, 0, 0) == QColor(255, 0, 0));
+    // The preview gets the trimmed frames, the current one and the others.
+    CHECK(editor.frameImage(0).size() == QSize(4, 2));
+    CHECK(editor.frameImage(0).pixelColor(0, 0) == QColor(255, 0, 0));
+    CHECK(editor.frameImage(1).pixelColor(3, 1) == QColor(255, 0, 0));
     CHECK_FALSE(editor.trimCanvas()); // already fits
 
     editor.undo();

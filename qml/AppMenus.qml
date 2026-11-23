@@ -20,7 +20,8 @@ QtObject {
     function run(action: string, arg: var) {
         switch (action) {
         case "copyMerged": editor.copyMerged(); break
-        case "pasteNewLayer": editor.pasteAsNewLayer(); break
+        case "pasteInPlace": editor.paste(); break
+        case "pasteNewLayer": canvas.hovering ? editor.pasteAsNewLayerAt(canvas.hoverPixel) : editor.pasteAsNewLayer(); break
         case "pasteNewSprite": editor.pasteAsNewSprite(); break
         case "deselect": editor.deselect(); break
         case "invertSelection": editor.invertSelection(); break
@@ -171,6 +172,7 @@ QtObject {
                 { text: qsTr("Copy"), action: "copy", key: "copy" },
                 { text: qsTr("Copy Merged"), action: "copyMerged", key: "copyMerged" },
                 { text: qsTr("Paste"), action: "paste", key: "paste", enabled: editor.canPaste },
+                { text: qsTr("Paste in Place"), action: "pasteInPlace", key: "pasteInPlace", enabled: editor.canPaste },
                 { text: qsTr("Paste as New Layer"), action: "pasteNewLayer", key: "pasteNewLayer", enabled: editor.canPaste },
                 { text: qsTr("Paste as New Sprite"), action: "pasteNewSprite", key: "pasteNewSprite", enabled: editor.canPaste },
                 sep,

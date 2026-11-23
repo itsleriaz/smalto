@@ -68,6 +68,37 @@ TEST_CASE("clipboard: copy, paste floats, move, place")
     CHECK(painted(c.editor, 3, 3));
 }
 
+TEST_CASE("clipboard: paste under the pointer, kept on the canvas")
+{
+    Canvas c;
+    c.select({2, 2, 3, 3});
+    c.editor.copy();
+    c.editor.deselect();
+
+    c.editor.pasteAt({10, 11}); // centered on the pointer
+    CHECK(c.editor.floating());
+    CHECK(c.editor.selection() == QRect(9, 10, 3, 3));
+    CHECK(c.editor.overlay().pixelColor(10, 11) == kRed);
+    c.editor.commitFloating();
+    CHECK(painted(c.editor, 10, 11));
+
+    // Off the canvas (the pointer over the margin): pulled back onto it.
+    c.editor.pasteAt({40, -20});
+    CHECK(c.editor.selection().contains(QPoint(15, 0)));
+    c.editor.cancelFloating();
+
+    // Paste in place still goes back to where it was copied from.
+    c.editor.paste();
+    CHECK(c.editor.selection() == QRect(2, 2, 3, 3));
+    c.editor.cancelFloating();
+
+    // As a new layer, under the pointer too.
+    const int layers = int(c.editor.layers().size());
+    REQUIRE(c.editor.pasteAsNewLayerAt({8, 8}));
+    CHECK(int(c.editor.layers().size()) == layers + 1);
+    CHECK(c.editor.selection() == QRect(7, 7, 3, 3));
+}
+
 TEST_CASE("clipboard: cut, and what places or drops a paste")
 {
     Canvas c;

@@ -589,6 +589,10 @@ public:
     Q_INVOKABLE void copy();
     Q_INVOKABLE void cut();
     Q_INVOKABLE void paste();
+    // The same, centered on `center` (the pixel under the pointer; kept on the
+    // canvas). Paste goes here when the pointer is over the canvas, so
+    // paste() is Paste in Place.
+    Q_INVOKABLE void pasteAt(QPoint center);
     // What every visible layer shows (inside the selection), not just the
     // current layer.
     Q_INVOKABLE void copyMerged();
@@ -596,6 +600,7 @@ public:
     // floating like a paste; or as a new sprite of its size (a new tab).
     // False when the clipboard has no image.
     Q_INVOKABLE bool pasteAsNewLayer();
+    Q_INVOKABLE bool pasteAsNewLayerAt(QPoint center);
     Q_INVOKABLE bool pasteAsNewSprite();
     static int maxImageSize() { return core::kMaxImageSize; }
     bool canPaste() const;
@@ -1728,6 +1733,8 @@ private:
     // The brush's pixels (RGBA; the built-in one of `size` in white) turned by `angle` degrees.
     core::Image brushPixels(bool custom, int size, int angle) const;
     bool useCustomBrush(const core::Image& rgba); // trims, checks the size, selects it
+    void pasteFloating(std::optional<QPoint> center); // paste() / pasteAt()
+    bool pasteNewLayer(std::optional<QPoint> center); // pasteAsNewLayer() / ...At()
     bool customBrushInUse() const;
     // Stamps the brush at p (image coordinates of `img`, at `origin` in the
     // document) and its mirrors: the built-in brush of m_brushSize, or

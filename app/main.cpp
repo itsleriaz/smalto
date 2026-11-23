@@ -1,4 +1,5 @@
 #include "ClickAway.h"
+#include "ScrollClick.h"
 #include "FileOpenQueue.h"
 #include "Migration.h"
 
@@ -91,6 +92,8 @@ int main(int argc, char* argv[])
 
     ClickAway clickAway;
     app.installEventFilter(&clickAway);
+    ScrollClick scrollClick; // a click on a scrolling list picks the row
+    app.installEventFilter(&scrollClick);
 
     QQmlApplicationEngine engine;
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,

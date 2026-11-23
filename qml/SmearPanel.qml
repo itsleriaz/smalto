@@ -27,6 +27,10 @@ Panel {
     readonly property var keyList: s.keyList ?? []
     readonly property int inset: 18 // where the labels start: everything else lines up with them
 
+    // How much of the pose handles shows on the canvas (0 all, 1 faded, 2 none); the window keeps it.
+    property int overlayMode: 0
+    signal overlayCycled()
+
     // Sections the user folded, as JSON {id: true} (remembered by the window).
     property string collapsedJson: "{}"
     signal collapsedEdited(string json)
@@ -449,6 +453,18 @@ Panel {
                 text: "Preset  \u25be"
                 tip: "Start over from a ready-made motion, from this frame: it replaces the keys, the pivot and the smear settings"
                 onToggled: gallery.open()
+            }
+            // The posing handles on the canvas: shown, faded or hidden (shared with the particle controls).
+            IconButton {
+                implicitWidth: 26
+                implicitHeight: 26
+                iconName: root.overlayMode === 2 ? "eye-off" : "eye"
+                active: root.overlayMode === 1
+                tip: (root.overlayMode === 0 ? "Pose handles on the canvas: shown"
+                      : root.overlayMode === 1 ? "Pose handles on the canvas: faded (full when you point at them)"
+                      : "Pose handles on the canvas: hidden") + " \u00b7 click to change"
+                       + (Shortcuts.labels.liveOverlay ? " (" + Shortcuts.labels.liveOverlay + ")" : "")
+                onClicked: root.overlayCycled()
             }
         }
 

@@ -106,7 +106,7 @@ These are the defaults. Rebind them in **Preferences → Shortcuts** (see [Short
 | Show / hide the preview | <kbd>F7</kbd> |
 | Show / hide the colors and palette | <kbd>F6</kbd> |
 | Show / hide the layers list | <kbd>F8</kbd> |
-| Particle controls on the canvas: shown, faded, hidden | <kbd>F9</kbd> |
+| Particle and smear controls on the canvas: shown, faded, hidden | <kbd>F9</kbd> |
 
 ## Timeline
 

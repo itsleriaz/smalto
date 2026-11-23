@@ -33,7 +33,7 @@ The **Particles panel** holds the settings, in folding sections:
 
 The **preset** menu at the top starts you over from a built-in preset (it replaces the settings, not where the emitter is) and **Save as preset…** keeps yours. A section's reset button returns it to the built-in values, and a dot marks a value that differs from them.
 
-Most handles are also on the canvas. **F9** cycles the particle controls on the canvas between shown, faded and hidden.
+Most handles are also on the canvas. **F9** (or the eye button at the top of the panel) cycles the particle controls on the canvas between shown, faded and hidden.
 
 ## Smear groups
 
@@ -41,7 +41,7 @@ A **Smear group** moves and distorts ordinary art over time, with motion trails.
 
 1. Draw your art on a layer (pointing right, like a sword drawn upright or a ball).
 2. Select the layer and choose **Layer → Smear** (or right-click → **Smear**). It's wrapped in a group.
-3. Use the **Pose** tool to place the art on a frame: drag inside its box to move, the round handle to turn it about the pivot (<kbd>Shift</kbd>: 15° steps), the square handles to scale (<kbd>Shift</kbd> keeps proportions; <kbd>Alt</kbd> on an edge handle skews), the ring to move the pivot. Each change makes a **key** for that frame, shown as a diamond on the group's timeline row.
+3. Use the **Pose** tool to place the art on a frame: drag inside its box to move, the round handle to turn it about the pivot (<kbd>Shift</kbd>: 15° steps), the square handles to scale (<kbd>Shift</kbd> keeps proportions; <kbd>Alt</kbd> on an edge handle skews), the ring to move the pivot. Each change makes a **key** for that frame, shown as a diamond on the group's timeline row. To see the art without the handles over it, the eye button at the top of the Smear panel (or **F9**) fades or hides them, as for particles.
 4. Smalto fills in the frames between keys.
 
 The panel shows the frame's pose as numbers (position, turn, scale, skew) and the group's settings:

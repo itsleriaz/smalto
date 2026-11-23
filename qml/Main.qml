@@ -976,7 +976,7 @@ ApplicationWindow {
         readonly property bool smearNow: appEditor.smearState.current ?? false
         onSmearNowChanged: if (smearNow) columns.reveal("live")
         property int liveField: -1 // the field being edited, shared by the panel and the canvas
-        property int liveOverlay: 0 // the particle controls on the canvas: 0 shown, 1 faded, 2 hidden
+        property int liveOverlay: 0 // the particle and smear controls on the canvas: 0 shown, 1 faded, 2 hidden
         onLiveNowChanged: if (liveNow) columns.reveal("live")
         // 1 shown, 0 hidden; the timeline slides down, the sidebar and the
         // size label above it follow.
@@ -1111,6 +1111,7 @@ ApplicationWindow {
         }
         SmearHandles {
             anchors.fill: parent
+            mode: ui.liveOverlay // shared with the particle controls (the same panel spot and key)
             editor: appEditor
             canvas: canvasView
             enabledHere: !canvasSizer.active && !appEditor.floating
@@ -1287,6 +1288,8 @@ ApplicationWindow {
             z: columns.dragId === "live" ? 50 : 0
             opacity: columns.dragId === "live" ? 0.85 : 1
             editor: appEditor
+            overlayMode: ui.liveOverlay
+            onOverlayCycled: ui.liveOverlay = (ui.liveOverlay + 1) % 3
             collapsedJson: ui.smearSections
             onCollapsedEdited: json => ui.smearSections = json
         }

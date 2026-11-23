@@ -16,9 +16,18 @@ Item {
     required property Editor editor
     required property CanvasView canvas
     property bool enabledHere: true // off while another canvas mode is active
+    // How much of the controls shows, as for particles: 0 all, 1 faded (full
+    // while the pointer is on one, inside the box, or dragging), 2 none.
+    property int mode: 0
+    property int scaleHovered: 0 // how many scale handles the pointer is on (or drags)
+    readonly property bool pointed: scaleHovered > 0 || turnArea.containsMouse || turnArea.pressed
+                                    || pivotArea.containsMouse || pivotArea.pressed || moveArea.pressed
+                                    || (moveArea.containsMouse && inside(moveArea.mouseX, moveArea.mouseY))
 
     readonly property var smear: editor.smearState
-    visible: enabledHere && (smear.current ?? false) && editor.tool === Editor.PoseTool
+    visible: mode !== 2 && enabledHere && (smear.current ?? false) && editor.tool === Editor.PoseTool
+    opacity: mode === 1 && !pointed ? 0.28 : 1
+    Behavior on opacity { NumberAnimation { duration: Theme.durationNormal } }
 
     readonly property real zoom: canvas.zoom
     readonly property point offset: canvas.offset
@@ -110,6 +119,7 @@ Item {
     MouseArea {
         id: moveArea
         anchors.fill: parent
+        hoverEnabled: true // for `pointed`
         preventStealing: true
         cursorShape: pressed ? Qt.ClosedHandCursor : Qt.ArrowCursor
         onPressed: mouse => {
@@ -254,6 +264,8 @@ Item {
                 anchors.fill: parent
                 anchors.margins: -5
                 hoverEnabled: true
+                onContainsMouseChanged: root.scaleHovered += containsMouse ? 1 : -1
+                onPressedChanged: root.scaleHovered += pressed ? 1 : -1
                 preventStealing: true
                 cursorShape: Qt.SizeAllCursor
                 onPressed: mouse => root.begin(this, mouse)

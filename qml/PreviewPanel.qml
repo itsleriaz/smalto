@@ -230,21 +230,15 @@ Panel {
             checkerLight: root.canvas.checkerA
             checkerDark: root.canvas.checkerB
             clip: true
+            wheelZooms: true // about the pointer, from Fit too
 
-            // Set zoom: drag pans. Scroll zooms (from Fit too).
+            // Set zoom: drag pans.
             DragHandler {
                 target: null
                 enabled: preview.fixedZoom > 0
                 property point start
                 onActiveChanged: if (active) start = preview.pan
                 onTranslationChanged: preview.pan = Qt.point(start.x + translation.x, start.y + translation.y)
-            }
-            WheelHandler {
-                target: null
-                onWheel: event => {
-                    const zoom = preview.fixedZoom > 0 ? preview.fixedZoom : preview.zoom
-                    preview.fixedZoom = Math.max(0.1, Math.min(64, zoom * (event.angleDelta.y > 0 ? 1.1 : 1 / 1.1)))
-                }
             }
             TapHandler {
                 // Double-click: back to Fit.

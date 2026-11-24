@@ -2,6 +2,7 @@
 
 #include <QPainter>
 #include <QQuickWindow>
+#include <QWheelEvent>
 
 #include <algorithm>
 #include <cmath>
@@ -54,6 +55,43 @@ void ImagePreview::setPan(QPointF pan)
     m_pan = pan;
     emit panChanged();
     update();
+}
+
+void ImagePreview::zoomAt(qreal factor, QPointF pos)
+{
+    const qreal from = m_zoom; // Fit's zoom too: zooming starts from what's shown
+    const qreal to = std::clamp(from * factor, kMinZoom, kMaxZoom);
+    if (to == from && m_fixedZoom > 0)
+        return;
+    // The image's center sits at the item's center plus the pan (none at Fit).
+    const QPointF center(width() / 2, height() / 2);
+    const QPointF pan = m_fixedZoom > 0 ? m_pan : QPointF();
+    const QPointF offset = pos - center - pan; // pointer from the image center
+    setFixedZoom(to);
+    setPan(pos - center - offset * (to / from));
+}
+
+void ImagePreview::wheelEvent(QWheelEvent* event)
+{
+    if (!m_wheelZooms || m_image.isNull()) {
+        event->ignore();
+        return;
+    }
+    if (!event->pixelDelta().isNull()) {
+        // Trackpad (or a smooth-scrolling mouse): many small steps per swipe,
+        // so each zooms a little, as on the canvas.
+        zoomAt(std::pow(1.01, event->pixelDelta().y()), event->position());
+    } else {
+        // A notched wheel: a step per notch (120). The start and end of a
+        // trackpad gesture carry no delta at all, and do nothing.
+        m_wheelAccum += event->angleDelta().y();
+        while (std::abs(m_wheelAccum) >= 120) {
+            const int dir = m_wheelAccum > 0 ? 1 : -1;
+            zoomAt(dir > 0 ? 1.25 : 1 / 1.25, event->position());
+            m_wheelAccum -= dir * 120;
+        }
+    }
+    event->accept();
 }
 
 void ImagePreview::updateZoom()

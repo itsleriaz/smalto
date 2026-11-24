@@ -60,6 +60,7 @@ if(SMALTO_BUILD_APP)
         app/test_pen.cpp
         app/test_migration.cpp
         app/test_scrollclick.cpp
+        app/test_previewzoom.cpp
         ${PROJECT_SOURCE_DIR}/app/Editor.h
         ${PROJECT_SOURCE_DIR}/app/Editor.cpp
         ${PROJECT_SOURCE_DIR}/app/FileOpenQueue.h
@@ -82,6 +83,8 @@ if(SMALTO_BUILD_APP)
         ${PROJECT_SOURCE_DIR}/app/Migration.cpp
         ${PROJECT_SOURCE_DIR}/app/ScrollClick.h
         ${PROJECT_SOURCE_DIR}/app/ScrollClick.cpp
+        ${PROJECT_SOURCE_DIR}/app/ImagePreview.h
+        ${PROJECT_SOURCE_DIR}/app/ImagePreview.cpp
     )
     set_target_properties(smalto_app_tests PROPERTIES AUTOMOC ON)
     target_include_directories(smalto_app_tests PRIVATE ${doctest_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/app)

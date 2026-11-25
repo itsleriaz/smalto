@@ -1,0 +1,32 @@
+{
+  "brand": "Smalto",
+  "tagline": "A fast, small pixel art editor and animator",
+  "brief": "Smalto is a free, open-source pixel art editor and animator (C++/Qt). The name is Italian for the glass tiles of a mosaic, and pixel art is mosaic. The mark should feel crafted, fast, small and a little playful, and must work as a 16 px favicon and as a macOS/Windows app icon.",
+  "adjectives": ["crafted", "fast", "small", "playful"],
+  "criteria": "Success: unmistakably this app, avoids pixel-pencil and 8-bit-heart clichés, readable at 16 px with the small cut, works in one colour, keeps the old icon's wine colour.",
+  "industry": "software",
+  "nav": ["Download", "Manual", "Source"],
+  "brand_color": "#900C3F",
+  "greyscale": false,
+  "designer": "Smalto",
+  "round": 2,
+  "concepts": [
+    {
+      "name": "Tessera S",
+      "symbol": "smalto-symbol.svg",
+      "lockup": "smalto-horizontal.svg",
+      "symbol_on_tile": "smalto-symbol-on-tile.svg",
+      "lockup_on_dark": "smalto-horizontal-reversed.svg",
+      "tile_color": "#900C3F",
+      "idea": "A pixel S set as mosaic tiles; the last tile, in coral, is still being placed.",
+      "rationale": [
+        "Grout gaps make it mosaic, not just a bitmap letter: the name and the medium in one shape",
+        "The tile in motion hints at animation, and gives the brand a story (the next pixel)",
+        "Built on a 44-unit grid with one radius and one gap; a gapless cut covers 16–32 px",
+        "Wine carries over from the old rosette icon; coral is the only accent"
+      ]
+    }
+  ],
+  "recommendation": "Tessera S, in wine with a coral accent tile; the small cut for anything 32 px and under.",
+  "next_steps": ["Check the new app icon in the Dock and taskbar", "Swap the manual's favicon for the web icon set", "Trademark search before wider use"]
+}
